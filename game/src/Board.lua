@@ -4,6 +4,28 @@ local class = require 'middleclass'
 -- アプリケーション
 local Board = class 'Board'
 
+-- ムーア近傍
+local mooreNeighborhood = {
+    { -1, -1 },
+    {  0, -1 },
+    {  1, -1 },
+    { -1,  0 },
+    {  1,  0 },
+    { -1,  1 },
+    {  0,  1 },
+    {  1,  1 },
+}
+
+-- ルール
+local rules = {
+    -- Conway's Game of Life
+    life = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false,  true, false, false, false, false, false,  },
+        survive = { false, false,  true,  true, false, false, false, false, false,  }
+    },
+}
+
 -- 初期化
 function Board:initialize(width, height, scale)
     -- リサイズ処理
@@ -12,11 +34,26 @@ function Board:initialize(width, height, scale)
     -- セル
     self.cells = {}
 
+    -- ルール
+    self.rule = rules.life
+
     -- その他
+    self.interval = 0
+    self.wait = self.interval
+    self.pause = false
 end
 
 -- 更新
 function Board:update(dt, ...)
+    if self.pause then
+        -- ポーズ中
+    else
+        self.wait = self.wait - dt
+        if self.wait <= 0 then
+            self:step()
+            self.wait = self.interval
+        end
+    end
 end
 
 -- 描画
@@ -25,6 +62,11 @@ function Board:draw(...)
     love.graphics.scale(self.scale)
     love.graphics.draw(self.canvas, self.quad)
     love.graphics.pop()
+end
+
+-- ポーズ切り替え
+function Board:togglePause()
+    self.pause = not self.pause
 end
 
 -- キャンバスへ描画
@@ -60,7 +102,7 @@ end
 
 -- ローカル座標へ変換
 function Board:toLocalPosition(x, y)
-    return x % self.width, y % self.height
+    return ((x - 1) % self.width) + 1, ((y - 1) % self.height) + 1
 end
 
 -- セルの取得
@@ -75,6 +117,19 @@ function Board:setCell(x, y, cell)
     end
     self.cells[x][y] = cell
     return self.cells[x][y]
+end
+
+-- セルをランダム配置
+function Board:resetRandomizeCells()
+    self.cells = {}
+
+    for x = 1, self.width do
+        for y = 1, self.height do
+            if love.math.random(2) == 1 then
+                self:setCell(x, y, {})
+            end
+        end
+    end
 end
 
 -- セルをすべて描画
@@ -95,6 +150,108 @@ function Board:renderAllCells()
             love.graphics.points(points)
         end
     )
+end
+
+-- 候補者としてエントリー
+function Board:entryCandidates(x, y, neighbor, candidates)
+    if candidates[x] == nil then
+        candidates[x] = {}
+    end
+    if candidates[x][y] == nil then
+        candidates[x][y] = { neighbors = { neighbor } }
+    else
+        table.insert(candidates[x][y].neighbors, neighbor)
+    end
+end
+
+-- 次の世代としてエントリー
+function Board:entryNextGeneration(x, y, cell, nextGenerations)
+    if nextGenerations[x] == nil then
+        nextGenerations[x] = {}
+    end
+    nextGenerations[x][y] = cell
+end
+
+-- セルのチェック
+function Board:checkCell(x, y, target, candidates)
+    x, y = self:toLocalPosition(x, y)
+    local cell = self:getCell(x, y)
+    if cell == nil then
+        -- 見つからなければ次世代候補にする
+        self:entryCandidates(x, y, target, candidates)
+    else
+        return cell
+    end
+end
+
+-- セルが生き残るかどうか
+function Board:checkSurvive(cell, count)
+    return self.rule.survive[count + 1] == true
+end
+
+-- セルが誕生するかどうか
+function Board:checkBirth(count)
+    return self.rule.birth[count + 1] == true
+end
+
+-- 次の世代へ進む
+function Board:step()
+    -- 誕生候補
+    local candidates = {}
+
+    -- 誕生
+    local births = {}
+
+    -- 死亡
+    local deaths = {}
+
+    -- 次の世代
+    local nextGenerations = {}
+
+    -- 生存しているセルをチェック
+    for x, column in pairs(self.cells) do
+        for y, cell in pairs(column) do
+            local count = 0
+            for _, pos in ipairs(mooreNeighborhood) do
+                if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
+                    count = count + 1
+                end
+            end
+            if self:checkSurvive(cell, count) then
+                -- 生き残る
+                self:entryNextGeneration(x, y, cell, nextGenerations)
+            else
+                -- 死ぬ
+                table.insert(deaths, x)
+                table.insert(deaths, y)
+            end
+        end
+    end
+
+    -- 誕生するかチェック
+    for x, column in pairs(candidates) do
+        for y, candidate in pairs(column) do
+            if self:checkBirth(#candidate.neighbors) then
+                -- 生まれる
+                table.insert(births, x)
+                table.insert(births, y)
+                self:entryNextGeneration(x, y, {}, nextGenerations)
+            end
+        end
+    end
+
+    -- 死者と誕生者を描画
+    self:renderTo(
+        function ()
+            love.graphics.setColor(0, 0, 0)
+            love.graphics.points(deaths)
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.points(births)
+        end
+    )
+
+    -- 次の世代へ差し替える
+    self.cells = nextGenerations
 end
 
 return Board
