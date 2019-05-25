@@ -48,10 +48,22 @@ function Board:update(dt, ...)
     if self.pause then
         -- ポーズ中
     else
+        -- 時間経過
         self.wait = self.wait - dt
-        if self.wait <= 0 then
+
+        -- インターバルを超えて時間が経過したらその分ステップ
+        while self.wait < 0 do
+            -- ステップ
             self:step()
-            self.wait = self.interval
+
+            -- インターバルの追加
+            if self.interval > 0 then
+                self.wait = self.wait + self.interval
+            else
+                -- インターバルなしなら終わり
+                self.wait = self.interval
+                break
+            end
         end
     end
 end
