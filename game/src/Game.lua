@@ -16,7 +16,14 @@ end
 -- 読み込み
 function Game:load(...)
     self.width, self.height = love.graphics.getDimensions()
-    self.board = Board(100, 100)
+    self.board = Board(100, 100, 2)
+
+    self.board:setCell(5, 5, 1)
+    self.board:setCell(6, 6, 1)
+    self.board:setCell(6, 7, 1)
+    self.board:setCell(5, 7, 1)
+    self.board:setCell(4, 7, 1)
+    self.board:renderAllCells()
 end
 
 -- 更新
@@ -40,6 +47,7 @@ end
 -- リサイズ
 function Game:resize(width, height)
     self.width, self.height = width, height
+    self.board:rescale()
 end
 
 return Game
