@@ -1,8 +1,9 @@
 
 local class = require 'middleclass'
 
--- アプリケーション
+-- クラス
 local Application = require 'Application'
+local Board = require 'Board'
 
 -- ゲーム
 local Game = class('Game', Application)
@@ -14,14 +15,18 @@ end
 
 -- 読み込み
 function Game:load(...)
+    self.width, self.height = love.graphics.getDimensions()
+    self.board = Board(100, 100)
 end
 
 -- 更新
 function Game:update(dt, ...)
+    self.board:update(dt)
 end
 
 -- 描画
 function Game:draw(...)
+    self.board:draw()
 end
 
 -- キー入力
@@ -34,6 +39,7 @@ end
 
 -- リサイズ
 function Game:resize(width, height)
+    self.width, self.height = width, height
 end
 
 return Game
