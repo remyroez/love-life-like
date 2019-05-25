@@ -27,22 +27,30 @@ local rules = {
 }
 
 -- 初期化
-function Board:initialize(width, height, scale)
+function Board:initialize(args)
+    args = type(args) == 'table' and args or {}
+
+    -- カラー
+    self.colors = args.colors or {
+        death = { 0, 0, 0 },
+        live = { 1, 1, 1 },
+    }
+
     -- リサイズ処理
-    self:resize(width, height, scale)
+    self:resize(args.width, args.height, args.scale)
 
     -- セル
-    self.cells = {}
+    self.cells = args.cells or {}
 
     -- ルール
-    self.rule = rules.life
+    self.rule = args.rule or rules.life
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
     -- その他
-    self.interval = 0
+    self.interval = args.interval or 0
     self.wait = self.interval
     self.pause = false
 end
@@ -174,9 +182,9 @@ function Board:renderCell(x, y)
     self:renderTo(
         function ()
             if self:getCell(x, y) then
-                love.graphics.setColor(1, 1, 1)
+                love.graphics.setColor(self.colors.live)
             else
-                love.graphics.setColor(0, 0, 0)
+                love.graphics.setColor(self.colors.death)
             end
             love.graphics.points(x, y)
         end
@@ -187,7 +195,7 @@ end
 function Board:renderAllCells()
     self:renderTo(
         function ()
-            love.graphics.clear()
+            love.graphics.clear(self.colors.death)
             local points = {}
             for x = 1, self.width do
                 for y = 1, self.height do
@@ -197,7 +205,7 @@ function Board:renderAllCells()
                     end
                 end
             end
-            love.graphics.setColor(1, 1, 1)
+            love.graphics.setColor(self.colors.live)
             love.graphics.points(points)
         end
     )
@@ -294,9 +302,9 @@ function Board:step()
     -- 死者と誕生者を描画
     self:renderTo(
         function ()
-            love.graphics.setColor(0, 0, 0)
+            love.graphics.setColor(self.colors.death)
             love.graphics.points(deaths)
-            love.graphics.setColor(1, 1, 1)
+            love.graphics.setColor(self.colors.live)
             love.graphics.points(births)
         end
     )

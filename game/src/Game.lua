@@ -19,7 +19,15 @@ function Game:load(...)
     self.width, self.height = love.graphics.getDimensions()
 
     -- ボード初期化
-    self.board = Board(100, 100, 3)
+    self.board = Board {
+        width = 100,
+        height = 100,
+        scale = 3,
+        colors = {
+            live = { 1, 1, 0 },
+            death = { 0, 0, 1 }
+        },
+    }
 
     -- ボードのランダム設定
     self.board:resetRandomizeCells()
