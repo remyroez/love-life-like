@@ -100,9 +100,14 @@ function Board:rescale(scale)
     self.quad:setViewport(0, 0, sw / self.scale, sh / self.scale)
 end
 
--- ローカル座標へ変換
-function Board:toLocalPosition(x, y)
+-- 座標のループ
+function Board:clampPositions(x, y)
     return ((x - 1) % self.width) + 1, ((y - 1) % self.height) + 1
+end
+
+-- ローカル座標へ変換
+function Board:toLocalPositions(x, y)
+    return self:clampPositions(math.ceil(x / self.scale), math.ceil(y / self.scale))
 end
 
 -- セルの取得
@@ -130,6 +135,20 @@ function Board:resetRandomizeCells()
             end
         end
     end
+end
+
+-- セルを描画
+function Board:renderCell(x, y)
+    self:renderTo(
+        function ()
+            if self:getCell(x, y) then
+                love.graphics.setColor(1, 1, 1)
+            else
+                love.graphics.setColor(0, 0, 0)
+            end
+            love.graphics.points(x, y)
+        end
+    )
 end
 
 -- セルをすべて描画
@@ -174,7 +193,7 @@ end
 
 -- セルのチェック
 function Board:checkCell(x, y, target, candidates)
-    x, y = self:toLocalPosition(x, y)
+    x, y = self:clampPositions(x, y)
     local cell = self:getCell(x, y)
     if cell == nil then
         -- 見つからなければ次世代候補にする
