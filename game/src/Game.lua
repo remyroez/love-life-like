@@ -53,6 +53,17 @@ end
 function Game:mousepressed(x, y, button, istouch, presses)
 end
 
+-- マウスホイール
+function Game:wheelmoved(x, y)
+    if y < 0 and self.board.scale > 1 then
+        -- ズームアウト
+        self.board:rescale(self.board.scale - 1)
+    elseif y > 0 and self.board.scale < 10 then
+        -- ズームイン
+        self.board:rescale(self.board.scale + 1)
+    end
+end
+
 -- リサイズ
 function Game:resize(width, height)
     self.width, self.height = width, height
