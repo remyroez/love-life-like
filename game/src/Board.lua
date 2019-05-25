@@ -37,6 +37,10 @@ function Board:initialize(width, height, scale)
     -- ルール
     self.rule = rules.life
 
+    -- オフセット
+    self.offsets = { 0, 0 }
+    self:setOffset(0, 0)
+
     -- その他
     self.interval = 0
     self.wait = self.interval
@@ -71,6 +75,7 @@ end
 -- 描画
 function Board:draw(...)
     love.graphics.push()
+    love.graphics.translate(self.offsets[1], self.offsets[2])
     love.graphics.scale(self.scale)
     love.graphics.draw(self.canvas, self.quad)
     love.graphics.pop()
@@ -100,7 +105,7 @@ function Board:resize(width, height, scale)
     self.canvas:setWrap('repeat', 'repeat')
 
     -- 矩形の作成
-    self.quad = love.graphics.newQuad(0, 0, sw / self.scale, sh / self.scale, self.width, self.height)
+    self.quad = love.graphics.newQuad(0, 0, sw / self.scale + self.width, sh / self.scale + self.height, self.width, self.height)
 end
 
 -- リスケール
@@ -109,7 +114,16 @@ function Board:rescale(scale)
 
     -- 矩形のサイズ変更
     local sw, sh = love.graphics.getDimensions()
-    self.quad:setViewport(0, 0, sw / self.scale, sh / self.scale)
+    self.quad:setViewport(0, 0, (sw) / self.scale + self.width, (sh) / self.scale + self.height)
+
+    -- オフセットの再設定
+    self:setOffset(self.offsets[1], self.offsets[2])
+end
+
+-- オフセットの設定
+function Board:setOffset(x, y)
+    local sw, sh = self.width * self.scale, self.height * self.scale
+    self.offsets[1], self.offsets[2] = ((x) % sw) - sw, ((y) % sh) - sh
 end
 
 -- 座標のループ

@@ -15,11 +15,20 @@ end
 
 -- 読み込み
 function Game:load(...)
+    -- スクリーンサイズ
     self.width, self.height = love.graphics.getDimensions()
+
+    -- ボード初期化
     self.board = Board(100, 100, 3)
 
+    -- ボードのランダム設定
     self.board:resetRandomizeCells()
     self.board:renderAllCells()
+
+    -- 移動モード
+    self.move = false
+    self.moveOrigin = { 0, 0 }
+    self.offsetOrigin = { 0, 0 }
 end
 
 -- 更新
@@ -95,6 +104,26 @@ function Game:controls()
             self.board:renderCell(x, y)
         else
             -- 既にセルが無い
+        end
+    else
+    end
+
+    -- 中クリック
+    if love.mouse.isDown(3) then
+        if not self.move then
+            -- 移動モード開始
+            self.move = true
+            self.moveOrigin = { love.mouse.getPosition() }
+            self.offsetOrigin[1], self.offsetOrigin[2] = self.board.offsets[1], self.board.offsets[2]
+        else
+            -- 移動中
+            local x, y = love.mouse.getPosition()
+            self.board:setOffset(self.offsetOrigin[1] + x - self.moveOrigin[1], self.offsetOrigin[2] + y - self.moveOrigin[2])
+        end
+    else
+        if self.move then
+            -- 移動モード終了
+            self.move = false
         end
     end
 end
