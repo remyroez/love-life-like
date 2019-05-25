@@ -1,17 +1,17 @@
 
 -- デバッグモード
-local debugMode = false
+local debugMode = true
 
 -- ライブラリ
 local lume = require 'lume'
-local lurker = debugMode and require 'lurker' or nil
+local lurker = require 'lurker'
 
 -- フォーカス
 local focused = true
 local screenshot
 
--- 画面のサイズ
-local width, height = 0, 0
+-- ゲーム
+local game = (require 'Game')()
 
 -- ホットスワップ後の対応
 if lurker then
@@ -22,12 +22,12 @@ end
 -- 読み込み
 function love.load()
     love.math.setRandomSeed(love.timer.getTime())
-    width, height = love.graphics.getDimensions()
 end
 
 -- 更新
 function love.update(dt)
     if focused then
+        game:update(dt)
     end
 end
 
@@ -36,6 +36,8 @@ function love.draw()
     if focused or screenshot == nil then
         -- 画面のリセット
         love.graphics.reset()
+
+        game:draw()
 
     elseif screenshot then
         -- スクリーンショットを描画
@@ -61,15 +63,13 @@ function love.keypressed(key, scancode, isrepeat)
         -- デバッグモード切り替え
         debugMode = not debugMode
     else
+        game:keypressed(key, scancode, isrepeat)
     end
 end
 
 -- マウス入力
 function love.mousepressed(...)
-end
-
--- ゲームパッド入力
-function love.gamepadpressed(...)
+    game:mousepressed(...)
 end
 
 -- フォーカス
@@ -91,5 +91,6 @@ function love.focus(f)
 end
 
 -- リサイズ
-function love.resize(width, height)
+function love.resize(...)
+    game:resize(...)
 end
