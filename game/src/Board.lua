@@ -26,6 +26,22 @@ local rules = {
     },
 }
 
+-- HSV カラーを RGB カラーに変換
+local function hsv(h, s, v)
+    if s <= 0 then return v, v, v end
+    h, s, v = h * 6, s, v
+    local c = v * s
+    local x = (1 - math.abs((h % 2) - 1)) * c
+    local m, r, g, b = (v - c), 0, 0, 0
+    if h < 1     then r, g, b = c, x, 0
+    elseif h < 2 then r, g, b = x, c, 0
+    elseif h < 3 then r, g, b = 0, c, x
+    elseif h < 4 then r, g, b = 0, x, c
+    elseif h < 5 then r, g, b = x, 0, c
+    else              r, g, b = c, 0, x
+    end return (r + m), (g + m), (b + m)
+end
+
 -- 初期化
 function Board:initialize(args)
     args = type(args) == 'table' and args or {}
@@ -182,9 +198,9 @@ function Board:renderCell(x, y)
     self:renderTo(
         function ()
             if self:getCell(x, y) then
-                love.graphics.setColor(self.colors.live)
+                love.graphics.setColor(self:getColor(self.colors.live))
             else
-                love.graphics.setColor(self.colors.death)
+                love.graphics.setColor(self:getColor(self.colors.death))
             end
             love.graphics.points(x, y)
         end
@@ -195,7 +211,7 @@ end
 function Board:renderAllCells()
     self:renderTo(
         function ()
-            love.graphics.clear(self.colors.death)
+            love.graphics.clear(self:getColor(self.colors.death))
             local points = {}
             for x = 1, self.width do
                 for y = 1, self.height do
@@ -205,7 +221,7 @@ function Board:renderAllCells()
                     end
                 end
             end
-            love.graphics.setColor(self.colors.live)
+            love.graphics.setColor(self:getColor(self.colors.live))
             love.graphics.points(points)
         end
     )
@@ -251,6 +267,17 @@ end
 -- セルが誕生するかどうか
 function Board:checkBirth(count)
     return self.rule.birth[count + 1] == true
+end
+
+-- 色の取得
+function Board:getColor(color)
+    if color[1] then
+        return color
+    elseif color.rgb then
+        return color.rgb
+    elseif color.hsv then
+        return hsv(unpack(color.hsv))
+    end
 end
 
 -- 次の世代へ進む
@@ -302,9 +329,9 @@ function Board:step()
     -- 死者と誕生者を描画
     self:renderTo(
         function ()
-            love.graphics.setColor(self.colors.death)
+            love.graphics.setColor(self:getColor(self.colors.death))
             love.graphics.points(deaths)
-            love.graphics.setColor(self.colors.live)
+            love.graphics.setColor(self:getColor(self.colors.live))
             love.graphics.points(births)
         end
     )

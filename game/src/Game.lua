@@ -24,8 +24,9 @@ function Game:load(...)
         height = 100,
         scale = 3,
         colors = {
-            live = { 1, 1, 0 },
-            death = { 0, 0, 1 }
+            --live = { 1, 1, 0 },
+            live = { hsv = { 1, 0, 1 } },
+            death = { 0, 0, 0 }
         },
     }
 
