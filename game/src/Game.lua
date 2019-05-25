@@ -16,13 +16,9 @@ end
 -- 読み込み
 function Game:load(...)
     self.width, self.height = love.graphics.getDimensions()
-    self.board = Board(100, 100, 2)
+    self.board = Board(100, 100, 3)
 
-    self.board:setCell(5, 5, 1)
-    self.board:setCell(6, 6, 1)
-    self.board:setCell(6, 7, 1)
-    self.board:setCell(5, 7, 1)
-    self.board:setCell(4, 7, 1)
+    self.board:resetRandomizeCells()
     self.board:renderAllCells()
 end
 
@@ -38,6 +34,14 @@ end
 
 -- キー入力
 function Game:keypressed(key, scancode, isrepeat)
+    if key == 'return' then
+        self.board:togglePause()
+    elseif key == 'space' or key == 's' then
+        self.board:step()
+    elseif key == 'r' then
+        self.board:resetRandomizeCells()
+        self.board:renderAllCells()
+    end
 end
 
 -- マウス入力
