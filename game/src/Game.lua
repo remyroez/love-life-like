@@ -55,6 +55,9 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == 'r' then
         self.board:resetRandomizeCells()
         self.board:renderAllCells()
+    elseif key == 'c' then
+        self.board:resetCells()
+        self.board:renderAllCells()
     end
 end
 

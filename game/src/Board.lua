@@ -133,6 +133,7 @@ end
 
 -- ローカル座標へ変換
 function Board:toLocalPositions(x, y)
+    x, y = x - self.offsets[1], y - self.offsets[2]
     return self:clampPositions(math.ceil(x / self.scale), math.ceil(y / self.scale))
 end
 
@@ -148,6 +149,11 @@ function Board:setCell(x, y, cell)
     end
     self.cells[x][y] = cell
     return self.cells[x][y]
+end
+
+-- セルをリセット
+function Board:resetCells(cells)
+    self.cells = cells or {}
 end
 
 -- セルをランダム配置
