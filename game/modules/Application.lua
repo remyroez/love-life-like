@@ -36,6 +36,10 @@ end
 function Application:mousepressed(x, y, button, istouch, presses)
 end
 
+-- マウスホイール
+function Application:wheelmoved(x, y)
+end
+
 -- ゲームパッド入力
 function Application:gamepadpressed(joystick, button)
 end

@@ -72,6 +72,11 @@ function love.mousepressed(...)
     game:mousepressed(...)
 end
 
+-- マウスホイール
+function love.wheelmoved(...)
+    game:wheelmoved(...)
+end
+
 -- フォーカス
 function love.focus(f)
     focused = f
