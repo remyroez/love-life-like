@@ -38,7 +38,7 @@ function Board:initialize(width, height, scale)
     self.rule = rules.life
 
     -- オフセット
-    self.offsets = { 0, 0 }
+    self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
     -- その他
@@ -75,7 +75,7 @@ end
 -- 描画
 function Board:draw(...)
     love.graphics.push()
-    love.graphics.translate(self.offsets[1], self.offsets[2])
+    love.graphics.translate(self.offset.x, self.offset.y)
     love.graphics.scale(self.scale)
     love.graphics.draw(self.canvas, self.quad)
     love.graphics.pop()
@@ -117,13 +117,13 @@ function Board:rescale(scale)
     self.quad:setViewport(0, 0, (sw) / self.scale + self.width, (sh) / self.scale + self.height)
 
     -- オフセットの再設定
-    self:setOffset(self.offsets[1], self.offsets[2])
+    self:setOffset(self.offset.x, self.offset.y)
 end
 
 -- オフセットの設定
 function Board:setOffset(x, y)
     local sw, sh = self.width * self.scale, self.height * self.scale
-    self.offsets[1], self.offsets[2] = ((x) % sw) - sw, ((y) % sh) - sh
+    self.offset.x, self.offset.y = (x % sw) - sw, (y % sh) - sh
 end
 
 -- 座標のループ
@@ -133,7 +133,7 @@ end
 
 -- ローカル座標へ変換
 function Board:toLocalPositions(x, y)
-    x, y = x - self.offsets[1], y - self.offsets[2]
+    x, y = x - self.offset.x, y - self.offset.y
     return self:clampPositions(math.ceil(x / self.scale), math.ceil(y / self.scale))
 end
 

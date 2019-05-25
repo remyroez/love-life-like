@@ -27,8 +27,8 @@ function Game:load(...)
 
     -- 移動モード
     self.move = false
-    self.moveOrigin = { 0, 0 }
-    self.offsetOrigin = { 0, 0 }
+    self.moveOrigin = { x = 0, y = 0 }
+    self.offsetOrigin = { x = 0, y = 0 }
 end
 
 -- 更新
@@ -116,12 +116,12 @@ function Game:controls()
         if not self.move then
             -- 移動モード開始
             self.move = true
-            self.moveOrigin = { love.mouse.getPosition() }
-            self.offsetOrigin[1], self.offsetOrigin[2] = self.board.offsets[1], self.board.offsets[2]
+            self.moveOrigin.x, self.moveOrigin.y = love.mouse.getPosition()
+            self.offsetOrigin.x, self.offsetOrigin.y = self.board.offset.x, self.board.offset.y
         else
             -- 移動中
             local x, y = love.mouse.getPosition()
-            self.board:setOffset(self.offsetOrigin[1] + x - self.moveOrigin[1], self.offsetOrigin[2] + y - self.moveOrigin[2])
+            self.board:setOffset(self.offsetOrigin.x + x - self.moveOrigin.x, self.offsetOrigin.y + y - self.moveOrigin.y)
         end
     else
         if self.move then
