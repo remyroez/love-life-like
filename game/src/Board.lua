@@ -302,7 +302,7 @@ function Board:newCell(args)
     -- 新規
     return {
         rule = rule or args.rule or self.rule,
-        color = color or args.color or { hsv = { 0, 0, 1 } },
+        color = color or args.color or self.colors.live,
         age = 0,
     }
 end
