@@ -7,7 +7,7 @@ local Board = class 'Board'
 -- HSV カラーを RGB カラーに変換
 local function hsv2rgb(h, s, v)
     if s <= 0 then return v, v, v end
-    h, s, v = h * 6, s, v
+    h, s, v = (h or 0) * 6, (s or 1), (v or 1)
     local c = v * s
     local x = (1 - math.abs((h % 2) - 1)) * c
     local m, r, g, b = (v - c), 0, 0, 0

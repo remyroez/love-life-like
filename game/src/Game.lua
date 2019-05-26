@@ -37,13 +37,14 @@ function Game:load(...)
         pause = true
     }
 
-    -- ボードのランダム設定
-    self.board:resetRandomizeCells()
-    self.board:renderAllCells()
-
     -- セル設置時の設定
-    self.rule = self.board.rule
     self.color = self.board.colors.live
+    self.randomColor = false
+    self.randomRule = false
+
+    -- ボードのランダム設定
+    self.board:resetRandomizeCells(self.randomColor, self.randomRule)
+    self.board:renderAllCells()
 
     -- 移動モード
     self.move = false
@@ -71,18 +72,30 @@ end
 function Game:keypressed(key, scancode, isrepeat)
     if key == 'return' then
         self.board:togglePause()
+    elseif key == 'z' then
+        self.randomColor = not self.randomColor
+        print('randomColor', self.randomColor)
+    elseif key == 'x' then
+        self.randomRule = not self.randomRule
+        print('randomRule', self.randomRule)
+    elseif key == 'c' then
+        self.board.option.crossoverColor = not self.board.option.crossoverColor
+        print('crossoverColor', self.board.option.crossoverColor)
+    elseif key == 'r' then
+        self.board.option.crossoverRule = not self.board.option.crossoverRule
+        print('crossoverRule', self.board.option.crossoverRule)
     elseif key == 'space' or key == 's' then
         self.board.pause = true
         self.board:step()
-    elseif key == 'r' then
-        self.board:resetRandomizeCells()
+    elseif key == 'backspace' then
+        self.board:resetRandomizeCells(self.randomColor, self.randomRule)
         self.board:renderAllCells()
-    elseif key == 'c' then
+    elseif key == 'delete' then
         self.board:resetCells()
         self.board:renderAllCells()
     elseif key == 'tab' then
         self.board.rule = Board.newRule(true)
-        self.board:resetRandomizeCells()
+        self.board:resetRandomizeCells(self.randomColor)
         self.board:renderAllCells()
         self:resetTitle()
     elseif key == '`' then
@@ -90,45 +103,45 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board:renderAllCells()
         self:resetTitle()
     elseif key == '1' then
-        self.rule = Board.rules.life
-        self.color = Board.newHSVColor(1 / 9 * 0, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.life
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 0, 1, 1)
+        self:resetTitle()
     elseif key == '2' then
-        self.rule = Board.rules.highLife
-        self.color = Board.newHSVColor(1 / 9 * 1, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.highLife
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 1, 1, 1)
+        self:resetTitle()
     elseif key == '3' then
-        self.rule = Board.rules.mazectric
-        self.color = Board.newHSVColor(1 / 9 * 2, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.mazectric
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 2, 1, 1)
+        self:resetTitle()
     elseif key == '4' then
-        self.rule = Board.rules.replicator
-        self.color = Board.newHSVColor(1 / 9 * 3, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.replicator
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 3, 1, 1)
+        self:resetTitle()
     elseif key == '5' then
-        self.rule = Board.rules.seeds
-        self.color = Board.newHSVColor(1 / 9 * 4, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.seeds
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 4, 1, 1)
+        self:resetTitle()
     elseif key == '6' then
-        self.rule = Board.rules.bugs
-        self.color = Board.newHSVColor(1 / 9 * 5, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.bugs
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 5, 1, 1)
+        self:resetTitle()
     elseif key == '7' then
-        self.rule = Board.rules._2x2
-        self.color = Board.newHSVColor(1 / 9 * 6, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules._2x2
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 6, 1, 1)
+        self:resetTitle()
     elseif key == '8' then
-        self.rule = Board.rules.stains
-        self.color = Board.newHSVColor(1 / 9 * 7, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.stains
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 7, 1, 1)
+        self:resetTitle()
     elseif key == '9' then
-        self.rule = Board.rules.lifeWithoutDeath
-        self.color = Board.newHSVColor(1 / 9 * 8, 1, 1)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.rules.lifeWithoutDeath
+        self.board.colors.live = Board.newHSVColor(1 / 9 * 8, 1, 1)
+        self:resetTitle()
     elseif key == '0' then
-        self.rule = Board.newRule(true)
-        self.color = Board.newColor(true)
-        self:resetTitle(self.rule)
+        self.board.rule = Board.newRule(true)
+        self.board.colors.live = Board.newColor(true)
+        self:resetTitle()
     end
 end
 
@@ -164,7 +177,14 @@ function Game:controls()
             -- 既にセルがある
         else
             -- セルが無いので描画
-            self.board:setCell(x, y, self.board:newCell{ rule = self.rule, color = self.color })
+            self.board:setCell(
+                x,
+                y,
+                self.board:newCell{
+                    rule = self.randomRule and Board.newRule(true) or nil,
+                    color = self.randomColor and Board.newColor(true) or nil
+                }
+            )
             self.board:renderCell(x, y)
         end
     elseif love.mouse.isDown(2) then
