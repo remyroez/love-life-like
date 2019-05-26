@@ -33,18 +33,19 @@ function Game:load(...)
             crossoverColor = false,
             crossoverRate = 0.00001,
             mutationRate = 0.00001,
-            aging = true,
-            agingColor = true,
-            agingDeath = true,
-            lifespan = 10,
+            aging = false,
+            agingColor = false,
+            agingDeath = false,
+            lifespan = 100,
+            lifespanRandom = false,
             lifeSaturation = 0.75,
         },
-        pause = true
+        pause = false
     }
 
     -- セル設置時の設定
     self.color = self.board.colors.live
-    self.randomColor = false
+    self.randomColor = true
     self.randomRule = false
 
     -- ボードのランダム設定
@@ -100,6 +101,7 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board:renderAllCells()
     elseif key == 'tab' then
         self.board.rule = Board.newRule(true)
+        self.board.colors.live = Board.newColor(true)
         self.board:resetRandomizeCells(self.randomColor)
         self.board:renderAllCells()
         self:resetTitle()

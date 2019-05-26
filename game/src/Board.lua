@@ -273,6 +273,7 @@ function Board:initialize(args)
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
     self.option.lifespan = args.option.lifespan or 1000
+    self.option.lifespanRandom = args.option.lifespanRandom ~= nil and args.option.lifespanRandom or false
     self.option.lifeSaturation = args.option.lifeSaturation or 0.75
 
     -- その他
@@ -645,6 +646,17 @@ function Board:checkBirthWithNeighbors(neighbors)
     return parents
 end
 
+-- セルがまだ若いかどうか
+function Board:checkAge(cell)
+    if self.option.lifespanRandom then
+        -- 年をとるほど死にやすくなる
+        return random() > cell.age / self.option.lifespan
+    else
+        -- 寿命を厳格に判定
+        return cell.age <= self.option.lifespan
+    end
+end
+
 -- 色の取得
 function Board:getColor(color)
     if color[1] then
@@ -676,7 +688,7 @@ function Board:step()
                     count = count + 1
                 end
             end
-            if self:checkSurvive(count, cell.rule) and (not self.option.agingDeath and true or (cell.age <= self.option.lifespan)) then
+            if self:checkSurvive(count, cell.rule) and (not self.option.agingDeath and true or self:checkAge(cell)) then
                 -- 生き残る
                 cell.age = cell.age + 1
 
