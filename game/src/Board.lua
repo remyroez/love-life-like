@@ -195,7 +195,23 @@ end
 -- セルの設定
 function Board:newCell(args)
     args = args or {}
-    return { color = args.color or { hsv = { 0, 0, 1 } }, age = 0 }
+
+    -- 遺伝
+    local rule
+    local color
+    if args.neighbors then
+        neighbors = args.neighbors
+        rule = deepcopy(neighbors[love.math.random(#neighbors)].rule)
+        color = deepcopy(neighbors[love.math.random(#neighbors)].color)
+        color.hsv[2] = 1
+    end
+
+    -- 新規
+    return {
+        rule = rule or args.rule or self.rule,
+        color = color or args.color or { hsv = { 0, 0, 1 } },
+        age = 0,
+    }
 end
 
 -- セルをリセット
@@ -295,13 +311,13 @@ function Board:checkCell(x, y, target, candidates)
 end
 
 -- セルが生き残るかどうか
-function Board:checkSurvive(cell, count)
-    return self.rule.survive[count + 1] == true
+function Board:checkSurvive(count, rule)
+    return (rule or self.rule).survive[count + 1] == true
 end
 
 -- セルが誕生するかどうか
-function Board:checkBirth(count)
-    return self.rule.birth[count + 1] == true
+function Board:checkBirth(count, rule)
+    return (rule or self.rule).birth[count + 1] == true
 end
 
 -- 色の取得
@@ -335,7 +351,7 @@ function Board:step()
                     count = count + 1
                 end
             end
-            if self:checkSurvive(cell, count) then
+            if self:checkSurvive(count, cell.rule) then
                 -- 生き残る
                 cell.age = cell.age + 1
                 --[[
@@ -365,9 +381,7 @@ function Board:step()
         for y, candidate in pairs(column) do
             if self:checkBirth(#candidate.neighbors) then
                 -- 生まれる
-                local color = deepcopy(candidate.neighbors[love.math.random(#candidate.neighbors)].color)
-                color.hsv[2] = 1
-                local cell = self:entryNextGeneration(x, y, self:newCell{ color = color }, nextGenerations)
+                local cell = self:entryNextGeneration(x, y, self:newCell{ color = color, neighbors = candidate.neighbors }, nextGenerations)
                 self:renderTo(
                     function ()
                         love.graphics.setColor(self:getColor(cell.color or self.colors.live))
