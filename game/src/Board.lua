@@ -175,19 +175,33 @@ function Board:setCell(x, y, cell)
     return self.cells[x][y]
 end
 
+-- セルの設定
+function Board:newCell(args)
+    args = args or {}
+    return { color = args.color or { hsv = { 0, 0, 1 } }, age = 0 }
+end
+
 -- セルをリセット
 function Board:resetCells(cells)
     self.cells = cells or {}
 end
 
 -- セルをランダム配置
-function Board:resetRandomizeCells()
+function Board:resetRandomizeCells(randomColor)
+    randomColor = randomColor == nil and true or randomColor
+
     self.cells = {}
 
     for x = 1, self.width do
         for y = 1, self.height do
             if love.math.random(2) == 1 then
-                self:setCell(x, y, {})
+                self:setCell(
+                    x,
+                    y,
+                    self:newCell{
+                        color = randomColor and { hsv = { love.math.random(), 1, 1 } } or self.colors.live
+                    }
+                )
             end
         end
     end
@@ -197,8 +211,9 @@ end
 function Board:renderCell(x, y)
     self:renderTo(
         function ()
-            if self:getCell(x, y) then
-                love.graphics.setColor(self:getColor(self.colors.live))
+            local cell = self:getCell(x, y)
+            if cell then
+                love.graphics.setColor(self:getColor(cell.color or self.colors.live))
             else
                 love.graphics.setColor(self:getColor(self.colors.death))
             end
@@ -213,16 +228,18 @@ function Board:renderAllCells()
         function ()
             love.graphics.clear(self:getColor(self.colors.death))
             local points = {}
+            local cell = nil
             for x = 1, self.width do
                 for y = 1, self.height do
-                    if self:getCell(x, y) then
-                        table.insert(points, x)
-                        table.insert(points, y)
+                    cell = self:getCell(x, y)
+                    if cell then
+                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
+                    else
+                        love.graphics.setColor(self:getColor(self.colors.death))
                     end
+                    love.graphics.points(x, y)
                 end
             end
-            love.graphics.setColor(self:getColor(self.colors.live))
-            love.graphics.points(points)
         end
     )
 end
@@ -245,6 +262,7 @@ function Board:entryNextGeneration(x, y, cell, nextGenerations)
         nextGenerations[x] = {}
     end
     nextGenerations[x][y] = cell
+    return cell
 end
 
 -- セルのチェック
@@ -285,9 +303,6 @@ function Board:step()
     -- 誕生候補
     local candidates = {}
 
-    -- 誕生
-    local births = {}
-
     -- 死亡
     local deaths = {}
 
@@ -305,6 +320,7 @@ function Board:step()
             end
             if self:checkSurvive(cell, count) then
                 -- 生き残る
+                cell.age = cell.age + 1
                 self:entryNextGeneration(x, y, cell, nextGenerations)
             else
                 -- 死ぬ
@@ -319,9 +335,15 @@ function Board:step()
         for y, candidate in pairs(column) do
             if self:checkBirth(#candidate.neighbors) then
                 -- 生まれる
-                table.insert(births, x)
-                table.insert(births, y)
-                self:entryNextGeneration(x, y, {}, nextGenerations)
+                local color = candidate.neighbors[love.math.random(#candidate.neighbors)].color
+                color[2] = 1
+                local cell = self:entryNextGeneration(x, y, self:newCell{ color = color }, nextGenerations)
+                self:renderTo(
+                    function ()
+                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
+                        love.graphics.points(x, y)
+                    end
+                )
             end
         end
     end
@@ -331,8 +353,6 @@ function Board:step()
         function ()
             love.graphics.setColor(self:getColor(self.colors.death))
             love.graphics.points(deaths)
-            love.graphics.setColor(self:getColor(self.colors.live))
-            love.graphics.points(births)
         end
     )
 

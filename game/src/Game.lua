@@ -102,7 +102,7 @@ function Game:controls()
             -- 既にセルがある
         else
             -- セルが無いので描画
-            self.board:setCell(x, y, {})
+            self.board:setCell(x, y, self.board:newCell())
             self.board:renderCell(x, y)
         end
     elseif love.mouse.isDown(2) then
