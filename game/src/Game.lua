@@ -29,8 +29,8 @@ function Game:load(...)
         },
         rule = Board.rules.life,
         option = {
-            crossoverRule = true,
-            crossoverColor = true,
+            crossoverRule = false,
+            crossoverColor = false,
             crossoverRate = 0.00001,
             mutationRate = 0.00001,
         }

@@ -399,6 +399,7 @@ end
 
 -- 交差
 function Board:crossover(parents)
+    -- 親をランダムに選ぶ
     local randomParent = parents[love.math.random(#parents)]
 
     -- 突然変異するかどうか
@@ -407,6 +408,8 @@ function Board:crossover(parents)
     -- ルール
     local rule
     if self.option.crossoverRule then
+        -- 交差
+
         -- 新ルール
         rule = Board.newRule()
 
@@ -460,12 +463,20 @@ function Board:crossover(parents)
             end
         end
     else
-        rule = deepcopy(randomParent.rule)
+        -- クローン
+        if mutation then
+            -- 突然変異
+            rule = Board.newRule(true)
+        else
+            -- 交差
+            rule = deepcopy(randomParent.rule)
+        end
     end
 
     -- 色
     local color
     if self.option.crossoverColor then
+        -- 交差
         if mutation then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
@@ -480,10 +491,18 @@ function Board:crossover(parents)
         color.hsv[2] = 1
         color.hsv[3] = 1
     else
-        color = deepcopy(randomParent.color)
+        -- クローン
+        if mutation then
+            -- 突然変異
+            color = Board.newHSVColor(random(), 1, 1)
+        else
+            -- 交差
+            color = deepcopy(randomParent.color)
+        end
     end
 
-    if mutation and (self.option.crossoverRule or self.option.crossoverColor) then
+    -- 突然変異ログ
+    if mutation then
         print('mutated!', Board.ruleToString(rule), unpack(color.hsv))
     end
 
