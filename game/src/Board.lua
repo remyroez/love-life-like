@@ -5,7 +5,7 @@ local class = require 'middleclass'
 local Board = class 'Board'
 
 -- ムーア近傍
-local mooreNeighborhood = {
+Board.static.mooreNeighborhood = {
     { -1, -1 },
     {  0, -1 },
     {  1, -1 },
@@ -17,12 +17,48 @@ local mooreNeighborhood = {
 }
 
 -- ルール
-local rules = {
-    -- Conway's Game of Life
+Board.static.rules = {
+    -- Conway's Game of Life (B3/S23)
     life = {
         --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false,  true, false, false, false, false, false,  },
-        survive = { false, false,  true,  true, false, false, false, false, false,  }
+        birth   = { false, false, false,  true, false, false, false, false, false, },
+        survive = { false, false,  true,  true, false, false, false, false, false, }
+    },
+    -- Maze (B3/S12345)
+    maze = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false,  true, false, false, false, false, false, },
+        survive = { false,  true,  true,  true,  true,  true, false, false, false, }
+    },
+    -- Mazectric (B3/S1234)
+    mazectric = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false,  true, false, false, false, false, false, },
+        survive = { false,  true,  true,  true,  true, false, false, false, false, }
+    },
+    -- Replicator (B1357/S1357)
+    replicator = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false,  true, false,  true, false,  true, false,  true, false, },
+        survive = { false,  true, false,  true, false,  true, false,  true, false, }
+    },
+    -- Seeds (B2/S)
+    seeds = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false,  true, false, false, false, false, false, false, },
+        survive = { false, false, false, false, false, false, false, false, false, }
+    },
+    -- Life without death (B3/S012345678)
+    lifeWithoutDeath = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false,  true, false, false, false, false, false, },
+        survive = {  true,  true,  true,  true,  true,  true,  true,  true,  true, }
+    },
+    -- Template (B/S)
+    _template = {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false, false, false, false, false, false, false, },
+        survive = { false, false, false, false, false, false, false, false, false, }
     },
 }
 
@@ -42,6 +78,7 @@ local function hsv(h, s, v)
     end return (r + m), (g + m), (b + m)
 end
 
+-- ディープコピー
 local function deepcopy(orig)
     local orig_type = type(orig)
     local copy
@@ -57,6 +94,48 @@ local function deepcopy(orig)
         copy = orig
     end
     return copy
+end
+
+-- ランダム
+local random = love.math.random
+
+-- ランダム真偽値
+local function randomBool()
+    return random(2) == 1
+end
+
+-- 新ルール
+Board.static.newRule = function(randomize)
+    return randomize and {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
+        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
+    } or {
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false, false, false, false, false, false, false, },
+        survive = { false, false, false, false, false, false, false, false, false, }
+    }
+end
+
+-- ルールを文字列化
+Board.static.ruleToString = function(rule)
+    local buffer = 'B'
+
+    for i, bool in ipairs(rule.birth) do
+        if bool then
+            buffer = buffer .. tostring(i)
+        end
+    end
+
+    buffer = buffer .. '/S'
+
+    for i, bool in ipairs(rule.survive) do
+        if bool then
+            buffer = buffer .. tostring(i)
+        end
+    end
+
+    return buffer
 end
 
 -- 初期化
@@ -76,7 +155,7 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or rules.life
+    self.rule = args.rule or Board.rules.life
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
@@ -227,7 +306,7 @@ function Board:resetRandomizeCells(randomColor)
 
     for x = 1, self.width do
         for y = 1, self.height do
-            if love.math.random(2) == 1 then
+            if randomBool() then
                 self:setCell(
                     x,
                     y,
@@ -346,7 +425,7 @@ function Board:step()
     for x, column in pairs(self.cells) do
         for y, cell in pairs(column) do
             local count = 0
-            for _, pos in ipairs(mooreNeighborhood) do
+            for _, pos in ipairs(Board.mooreNeighborhood) do
                 if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
                     count = count + 1
                 end

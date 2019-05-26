@@ -28,6 +28,7 @@ function Game:load(...)
             live = { hsv = { 1, 0, 1 } },
             death = { 0, 0, 0 }
         },
+        rule = Board.newRule(true)
     }
 
     -- ボードのランダム設定
@@ -38,6 +39,8 @@ function Game:load(...)
     self.move = false
     self.moveOrigin = { x = 0, y = 0 }
     self.offsetOrigin = { x = 0, y = 0 }
+
+    self:resetTitle()
 end
 
 -- 更新
@@ -67,6 +70,11 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == 'c' then
         self.board:resetCells()
         self.board:renderAllCells()
+    elseif key == 'tab' then
+        self.board.rule = Board.newRule(true)
+        self.board:resetRandomizeCells()
+        self.board:renderAllCells()
+        self:resetTitle()
     end
 end
 
@@ -138,6 +146,11 @@ function Game:controls()
             self.move = false
         end
     end
+end
+
+-- タイトルのリセット
+function Game:resetTitle()
+    love.window.setTitle('LIFE-LIKE - ' .. Board.ruleToString(self.board.rule))
 end
 
 return Game
