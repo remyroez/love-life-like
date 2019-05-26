@@ -123,7 +123,7 @@ Board.static.ruleToString = function(rule)
 
     for i, bool in ipairs(rule.birth) do
         if bool then
-            buffer = buffer .. tostring(i)
+            buffer = buffer .. tostring(i - 1)
         end
     end
 
@@ -131,7 +131,7 @@ Board.static.ruleToString = function(rule)
 
     for i, bool in ipairs(rule.survive) do
         if bool then
-            buffer = buffer .. tostring(i)
+            buffer = buffer .. tostring(i - 1)
         end
     end
 
