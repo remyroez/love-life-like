@@ -269,8 +269,15 @@ function Board:initialize(args)
     self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
     self.option.crossoverRate = args.option.mutationRate or 0.001
     self.option.mutationRate = args.option.mutationRate or 0.001
+    self.option.aging = args.option.aging ~= nil and args.option.aging or false
+    self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
+    self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
+    self.option.lifespan = args.option.lifespan or 1000
+    self.option.lifeSaturation = args.option.lifeSaturation or 0.75
 
     -- その他
+    self.minLifeSaturation = 1 - self.option.lifeSaturation
+    self.lifeSaturationUnit = 1 / self.option.lifespan
     self.interval = args.interval or 0
     self.wait = self.interval
     self.pause = args.pause ~= nil and args.pause or false
@@ -394,7 +401,7 @@ function Board:newCell(args)
     -- 新規
     return {
         rule = rule or args.rule or self.rule,
-        color = color or args.color or self.colors.live,
+        color = color or args.color or deepcopy(self.colors.live),
         age = 0,
     }
 end
@@ -504,6 +511,8 @@ function Board:crossover(parents)
             -- 交差
             color = deepcopy(randomParent.color)
         end
+        color.hsv[2] = 1
+        color.hsv[3] = 1
     end
 
     -- 突然変異ログ
@@ -534,7 +543,7 @@ function Board:resetRandomizeCells(randomColor, randomRule)
                     y,
                     self:newCell{
                         rule = randomRule and Board.newRule(true) or self.rule,
-                        color = randomColor and Board.newColor(true) or self.colors.live
+                        color = randomColor and Board.newColor(true) or deepcopy(self.colors.live)
                     }
                 )
             end
@@ -667,23 +676,25 @@ function Board:step()
                     count = count + 1
                 end
             end
-            if self:checkSurvive(count, cell.rule) then
+            if self:checkSurvive(count, cell.rule) and (not self.option.agingDeath and true or (cell.age <= self.option.lifespan)) then
                 -- 生き残る
                 cell.age = cell.age + 1
-                --[[
-                if cell.color.hsv[2] > 0.25 then
-                    cell.color.hsv[2] = cell.color.hsv[2] - 0.001
-                end
-                --]]
+
+                -- 次世代へ
                 self:entryNextGeneration(x, y, cell, nextGenerations)
-                --[[
-                self:renderTo(
-                    function ()
-                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                        love.graphics.points(x, y)
+
+                -- 老化
+                if self.option.aging and self.option.agingColor then
+                    if cell.color.hsv[2] > self.minLifeSaturation then
+                        cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
                     end
-                )
-                --]]--
+                    self:renderTo(
+                        function ()
+                            love.graphics.setColor(self:getColor(cell.color or self.colors.live))
+                            love.graphics.points(x, y)
+                        end
+                    )
+                end
             else
                 -- 死ぬ
                 table.insert(deaths, x)

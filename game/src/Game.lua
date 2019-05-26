@@ -33,6 +33,11 @@ function Game:load(...)
             crossoverColor = false,
             crossoverRate = 0.00001,
             mutationRate = 0.00001,
+            aging = true,
+            agingColor = true,
+            agingDeath = true,
+            lifespan = 10,
+            lifeSaturation = 0.75,
         },
         pause = true
     }
