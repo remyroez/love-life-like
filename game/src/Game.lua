@@ -28,7 +28,12 @@ function Game:load(...)
             death = Board.newHSVColor(0, 0, 0)
         },
         rule = Board.rules.life,
-        crossoverColor = true,
+        option = {
+            crossoverRule = true,
+            crossoverColor = true,
+            crossoverRate = 0.00001,
+            mutationRate = 0.00001,
+        }
     }
 
     -- ボードのランダム設定

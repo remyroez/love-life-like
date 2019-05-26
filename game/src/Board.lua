@@ -174,6 +174,32 @@ Board.static.stringToRule = function(str)
     return rule
 end
 
+-- ルールが一致しているか判定
+Board.static.checkRules = function(rules)
+    local checked = { 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any' }
+    local anyIndice = {}
+
+    -- 先頭ルールをベースにする
+    local base = rules[1]
+    for i = 1, #checked do
+        -- 先頭ルールのフラグをベースにする
+        checked[i] = tostring(base[i])
+
+        -- ベースフラグと一致しなかったら any
+        for j, flag in ipairs(rules) do
+            if j > 1 then
+                if flag ~= base[i] then
+                    checked[i] = 'any'
+                    table.insert(anyIndice, i)
+                    break
+                end
+            end
+        end
+    end
+
+    return checked, anyIndice
+end
+
 -- ムーア近傍
 Board.static.mooreNeighborhood = {
     { -1, -1 },
@@ -236,7 +262,11 @@ function Board:initialize(args)
     self:setOffset(0, 0)
 
     -- 遺伝オプション
-    self.crossoverColor = args.crossoverColor == nil and true or args.crossoverColor
+    self.option = args.option or {}
+    self.option.crossoverRule = args.option.crossoverRule == nil and true or args.option.crossoverRule
+    self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
+    self.option.crossoverRate = args.option.mutationRate or 0.001
+    self.option.mutationRate = args.option.mutationRate or 0.001
 
     -- その他
     self.interval = args.interval or 0
@@ -371,22 +401,90 @@ end
 function Board:crossover(parents)
     local randomParent = parents[love.math.random(#parents)]
 
+    -- 突然変異するかどうか
+    local mutation = random() <= self.option.mutationRate
+
+    -- ルール
     local rule
-    do
+    if self.option.crossoverRule then
+        -- 新ルール
+        rule = Board.newRule()
+
+        -- それぞれのルールのリストアップ
+        local birthRules = {}
+        local surviveRules = {}
+        for _, parent in ipairs(parents) do
+            table.insert(birthRules, parent.rule.birth)
+            table.insert(surviveRules, parent.rule.survive)
+        end
+
+        -- 誕生ルールの交差
+        do
+            -- 交差
+            local rules = {}
+            local checked, anyIndice = Board.checkRules(birthRules)
+            for i, check in ipairs(checked) do
+                if check == 'any' then
+                    rule.birth[i] = parents[random(#parents)].rule.birth[i]
+                else
+                    rule.birth[i] = check == 'true'
+                end
+            end
+
+            -- 突然変異
+            if #anyIndice > 0 and mutation then
+                local mutationIndex = anyIndice[random(#anyIndice)]
+                rule.birth[mutationIndex] = not rule.birth[mutationIndex]
+                mutated = true
+            end
+        end
+
+        -- 生存ルールの交差
+        do
+            -- 交差
+            local rules = {}
+            local checked, anyIndice = Board.checkRules(surviveRules)
+            for i, check in ipairs(checked) do
+                if check == 'any' then
+                    rule.survive[i] = parents[love.math.random(#parents)].rule.survive[i]
+                else
+                    rule.survive[i] = check == 'true'
+                end
+            end
+
+            -- 突然変異
+            if #anyIndice > 0 and mutation then
+                local mutationIndex = anyIndice[random(#anyIndice)]
+                rule.survive[mutationIndex] = not rule.survive[mutationIndex]
+                mutated = true
+            end
+        end
+    else
         rule = deepcopy(randomParent.rule)
     end
 
+    -- 色
     local color
-    if self.crossoverColor then
-        local colors = {}
-        for _, parent in ipairs(parents) do
-            table.insert(colors, parent.color.hsv)
+    if self.option.crossoverColor then
+        if mutation then
+            -- 突然変異
+            color = Board.newHSVColor(random(), 1, 1)
+        else
+            -- 交差
+            local colors = {}
+            for _, parent in ipairs(parents) do
+                table.insert(colors, parent.color.hsv)
+            end
+            color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
         end
-        color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
         color.hsv[2] = 1
         color.hsv[3] = 1
     else
         color = deepcopy(randomParent.color)
+    end
+
+    if mutation and (self.option.crossoverRule or self.option.crossoverColor) then
+        print('mutated!', Board.ruleToString(rule), unpack(color.hsv))
     end
 
     return rule, color
