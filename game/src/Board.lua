@@ -5,7 +5,7 @@ local class = require 'middleclass'
 local Board = class 'Board'
 
 -- HSV カラーを RGB カラーに変換
-local function hsv(h, s, v)
+local function hsv2rgb(h, s, v)
     if s <= 0 then return v, v, v end
     h, s, v = h * 6, s, v
     local c = v * s
@@ -17,7 +17,67 @@ local function hsv(h, s, v)
     elseif h < 4 then r, g, b = 0, x, c
     elseif h < 5 then r, g, b = x, 0, c
     else              r, g, b = c, 0, x
-    end return (r + m), (g + m), (b + m)
+    end
+    return (r + m), (g + m), (b + m)
+end
+
+-- RGB カラーを HSV カラーに変換
+local function rgb2hsv(r, g, b)
+    r, g, b = r or 0, g or 0, b or 0
+    local max, min = math.max(r, g, b), math.min(r, g, b)
+    local h, s, v
+    v = max
+
+    local d = max - min
+    if max == 0 then s = 0 else s = d / max end
+
+    if max == min then
+      h = 0 -- achromatic
+    else
+      if max == r then
+      h = (g - b) / d
+      if g < b then h = h + 6 end
+      elseif max == g then h = (b - r) / d + 2
+      elseif max == b then h = (r - g) / d + 4
+      end
+      h = h / 6
+    end
+
+    return h, s, v
+end
+
+-- 任意の数の RGB カラーをブレンド
+local function blendRGB(...)
+    local rgb = { 0, 0, 0 }
+
+    local n = select("#", ...)
+    for i = 1, n do
+        local color = select(i, ...)
+        for j, elm in ipairs(rgb) do
+            rgb[j] = rgb[j] + color[j]
+        end
+    end
+
+    rgb[1] = math.min(rgb[1] / n, 1)
+    rgb[2] = math.min(rgb[2] / n, 1)
+    rgb[3] = math.min(rgb[3] / n, 1)
+
+    return rgb
+end
+
+-- 任意の数の HSV カラーをブレンド
+local function blendHSV(...)
+    local rgbs = {}
+
+    local n = select("#", ...)
+    for i = 1, n do
+        local color = select(i, ...)
+        table.insert(rgbs, { hsv2rgb(color[1], color[2], color[3]) })
+    end
+
+    local rgb = blendRGB(unpack(rgbs))
+
+    return { rgb2hsv(rgb[1], rgb[2], rgb[3]) }
 end
 
 -- ディープコピー
@@ -175,6 +235,9 @@ function Board:initialize(args)
     self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
+    -- 遺伝オプション
+    self.crossoverColor = args.crossoverColor == nil and true or args.crossoverColor
+
     -- その他
     self.interval = args.interval or 0
     self.wait = self.interval
@@ -293,10 +356,7 @@ function Board:newCell(args)
     local rule
     local color
     if args.parents then
-        local parent = args.parents[love.math.random(#args.parents)]
-        rule = deepcopy(parent.rule)
-        color = deepcopy(parent.color)
-        color.hsv[2] = 1
+        rule, color = self:crossover(args.parents)
     end
 
     -- 新規
@@ -305,6 +365,31 @@ function Board:newCell(args)
         color = color or args.color or self.colors.live,
         age = 0,
     }
+end
+
+-- 交差
+function Board:crossover(parents)
+    local randomParent = parents[love.math.random(#parents)]
+
+    local rule
+    do
+        rule = deepcopy(randomParent.rule)
+    end
+
+    local color
+    if self.crossoverColor then
+        local colors = {}
+        for _, parent in ipairs(parents) do
+            table.insert(colors, parent.color.hsv)
+        end
+        color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
+        color.hsv[2] = 1
+        color.hsv[3] = 1
+    else
+        color = deepcopy(randomParent.color)
+    end
+
+    return rule, color
 end
 
 -- セルをリセット
@@ -436,7 +521,7 @@ function Board:getColor(color)
     elseif color.rgb then
         return color.rgb
     elseif color.hsv then
-        return hsv(unpack(color.hsv))
+        return hsv2rgb(unpack(color.hsv))
     end
 end
 

@@ -27,7 +27,8 @@ function Game:load(...)
             live = Board.newHSVColor(1, 0, 1),
             death = Board.newHSVColor(0, 0, 0)
         },
-        rule = Board.rules.life
+        rule = Board.rules.life,
+        crossoverColor = true,
     }
 
     -- ボードのランダム設定
