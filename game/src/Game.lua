@@ -130,7 +130,7 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board.colors.live = Board.newHSVColor(1 / 9 * 4, 1, 1)
         self:resetTitle()
     elseif key == '6' then
-        self.board.rule = Board.rules.bugs
+        self.board.rule = Board.rules.bacteria
         self.board.colors.live = Board.newHSVColor(1 / 9 * 5, 1, 1)
         self:resetTitle()
     elseif key == '7' then
@@ -138,7 +138,7 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board.colors.live = Board.newHSVColor(1 / 9 * 6, 1, 1)
         self:resetTitle()
     elseif key == '8' then
-        self.board.rule = Board.rules.stains
+        self.board.rule = Board.rules.diamoeba
         self.board.colors.live = Board.newHSVColor(1 / 9 * 7, 1, 1)
         self:resetTitle()
     elseif key == '9' then
