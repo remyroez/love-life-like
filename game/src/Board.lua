@@ -4,64 +4,6 @@ local class = require 'middleclass'
 -- アプリケーション
 local Board = class 'Board'
 
--- ムーア近傍
-Board.static.mooreNeighborhood = {
-    { -1, -1 },
-    {  0, -1 },
-    {  1, -1 },
-    { -1,  0 },
-    {  1,  0 },
-    { -1,  1 },
-    {  0,  1 },
-    {  1,  1 },
-}
-
--- ルール
-Board.static.rules = {
-    -- Conway's Game of Life (B3/S23)
-    life = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false,  true, false, false, false, false, false, },
-        survive = { false, false,  true,  true, false, false, false, false, false, }
-    },
-    -- Maze (B3/S12345)
-    maze = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false,  true, false, false, false, false, false, },
-        survive = { false,  true,  true,  true,  true,  true, false, false, false, }
-    },
-    -- Mazectric (B3/S1234)
-    mazectric = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false,  true, false, false, false, false, false, },
-        survive = { false,  true,  true,  true,  true, false, false, false, false, }
-    },
-    -- Replicator (B1357/S1357)
-    replicator = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false,  true, false,  true, false,  true, false,  true, false, },
-        survive = { false,  true, false,  true, false,  true, false,  true, false, }
-    },
-    -- Seeds (B2/S)
-    seeds = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false,  true, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, }
-    },
-    -- Life without death (B3/S012345678)
-    lifeWithoutDeath = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false,  true, false, false, false, false, false, },
-        survive = {  true,  true,  true,  true,  true,  true,  true,  true,  true, }
-    },
-    -- Template (B/S)
-    _template = {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, }
-    },
-}
-
 -- HSV カラーを RGB カラーに変換
 local function hsv(h, s, v)
     if s <= 0 then return v, v, v end
@@ -137,6 +79,68 @@ Board.static.ruleToString = function(rule)
 
     return buffer
 end
+
+-- ルールを文字列化
+Board.static.stringToRule = function(str)
+    str = str or 'B/S'
+
+    local rule = Board.newRule()
+
+    local target = 'birth'
+    for i = 1, string.len(str) do
+        local c = string.sub(str, i, i)
+        if c == 'B' then
+            target = 'birth'
+        elseif c == 'S' then
+            target = 'survive'
+        else
+            local n = tonumber(c)
+            if n then
+                rule[target][n + 1] = true
+            end
+        end
+    end
+
+    return rule
+end
+
+-- ムーア近傍
+Board.static.mooreNeighborhood = {
+    { -1, -1 },
+    {  0, -1 },
+    {  1, -1 },
+    { -1,  0 },
+    {  1,  0 },
+    { -1,  1 },
+    {  0,  1 },
+    {  1,  1 },
+}
+
+-- ルール
+Board.static.rules = {
+    -- Conway's Game of Life (B3/S23)
+    life = Board.static.stringToRule 'B3/S23',
+    -- HighLife (B36/S23)
+    highLife = Board.static.stringToRule 'B36/S23',
+    -- Maze (B3/S12345)
+    maze = Board.static.stringToRule 'B3/S12345',
+    -- Mazectric (B3/S1234)
+    mazectric = Board.static.stringToRule 'B3/S1234',
+    -- Replicator (B1357/S1357)
+    replicator = Board.static.stringToRule 'B1357/S1357',
+    -- Seeds (B2/S)
+    seeds = Board.static.stringToRule 'B2/S',
+    -- Life without death (B3/S012345678)
+    lifeWithoutDeath = Board.static.stringToRule 'B3/S012345678',
+    -- Bugs (B3567/S15678)
+    bugs = Board.static.stringToRule 'B3567/S15678',
+    -- 2x2 (B36/S125)
+    _2x2 = Board.static.stringToRule 'B36/S125',
+    -- Stains (B3678/S235678)
+    stains = Board.static.stringToRule 'B3678/S235678',
+    -- Day & Night (B3678/S34678)
+    dayAndNight = Board.static.stringToRule 'B3678/S34678',
+}
 
 -- 初期化
 function Board:initialize(args)
