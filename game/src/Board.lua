@@ -42,6 +42,23 @@ local function hsv(h, s, v)
     end return (r + m), (g + m), (b + m)
 end
 
+local function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        -- tableなら再帰でコピー
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else
+        -- number, string, booleanなどはそのままコピー
+        copy = orig
+    end
+    return copy
+end
+
 -- 初期化
 function Board:initialize(args)
     args = type(args) == 'table' and args or {}
@@ -321,7 +338,20 @@ function Board:step()
             if self:checkSurvive(cell, count) then
                 -- 生き残る
                 cell.age = cell.age + 1
+                --[[
+                if cell.color.hsv[2] > 0.25 then
+                    cell.color.hsv[2] = cell.color.hsv[2] - 0.001
+                end
+                --]]
                 self:entryNextGeneration(x, y, cell, nextGenerations)
+                --[[
+                self:renderTo(
+                    function ()
+                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
+                        love.graphics.points(x, y)
+                    end
+                )
+                --]]--
             else
                 -- 死ぬ
                 table.insert(deaths, x)
@@ -335,8 +365,8 @@ function Board:step()
         for y, candidate in pairs(column) do
             if self:checkBirth(#candidate.neighbors) then
                 -- 生まれる
-                local color = candidate.neighbors[love.math.random(#candidate.neighbors)].color
-                color[2] = 1
+                local color = deepcopy(candidate.neighbors[love.math.random(#candidate.neighbors)].color)
+                color.hsv[2] = 1
                 local cell = self:entryNextGeneration(x, y, self:newCell{ color = color }, nextGenerations)
                 self:renderTo(
                     function ()
