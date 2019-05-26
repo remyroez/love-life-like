@@ -29,11 +29,12 @@ function Game:load(...)
         },
         rule = Board.rules.life,
         option = {
-            crossoverRule = false,
+            crossoverRule = true,
             crossoverColor = false,
             crossoverRate = 0.00001,
             mutationRate = 0.00001,
-        }
+        },
+        pause = true
     }
 
     -- ボードのランダム設定

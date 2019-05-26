@@ -176,8 +176,8 @@ end
 
 -- ルールが一致しているか判定
 Board.static.checkRules = function(rules)
-    local checked = { 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any' }
-    local anyIndice = {}
+    local checked = { 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any' }
+    local sameIndice = {}
 
     -- 先頭ルールをベースにする
     local base = rules[1]
@@ -186,18 +186,20 @@ Board.static.checkRules = function(rules)
         checked[i] = tostring(base[i])
 
         -- ベースフラグと一致しなかったら any
-        for j, flag in ipairs(rules) do
+        for j, rule in ipairs(rules) do
             if j > 1 then
-                if flag ~= base[i] then
+                if rule[i] ~= base[i] then
                     checked[i] = 'any'
-                    table.insert(anyIndice, i)
                     break
                 end
             end
         end
+        if checked[i] ~= 'any' then
+            table.insert(sameIndice, i)
+        end
     end
 
-    return checked, anyIndice
+    return checked, sameIndice
 end
 
 -- ムーア近傍
@@ -271,7 +273,7 @@ function Board:initialize(args)
     -- その他
     self.interval = args.interval or 0
     self.wait = self.interval
-    self.pause = false
+    self.pause = args.pause ~= nil and args.pause or false
 end
 
 -- 更新
@@ -404,6 +406,7 @@ function Board:crossover(parents)
 
     -- 突然変異するかどうか
     local mutation = random() <= self.option.mutationRate
+    local birthOrSurvive = random(2) == 1
 
     -- ルール
     local rule
@@ -425,7 +428,7 @@ function Board:crossover(parents)
         do
             -- 交差
             local rules = {}
-            local checked, anyIndice = Board.checkRules(birthRules)
+            local checked, sameIndice = Board.checkRules(birthRules)
             for i, check in ipairs(checked) do
                 if check == 'any' then
                     rule.birth[i] = parents[random(#parents)].rule.birth[i]
@@ -435,8 +438,9 @@ function Board:crossover(parents)
             end
 
             -- 突然変異
-            if #anyIndice > 0 and mutation then
-                local mutationIndex = anyIndice[random(#anyIndice)]
+            if #sameIndice > 0 and mutation and birthOrSurvive then
+                -- 全ての親で同じフラグのどれかを反転
+                local mutationIndex = sameIndice[random(#sameIndice)]
                 rule.birth[mutationIndex] = not rule.birth[mutationIndex]
                 mutated = true
             end
@@ -446,7 +450,7 @@ function Board:crossover(parents)
         do
             -- 交差
             local rules = {}
-            local checked, anyIndice = Board.checkRules(surviveRules)
+            local checked, sameIndice = Board.checkRules(surviveRules)
             for i, check in ipairs(checked) do
                 if check == 'any' then
                     rule.survive[i] = parents[love.math.random(#parents)].rule.survive[i]
@@ -456,8 +460,9 @@ function Board:crossover(parents)
             end
 
             -- 突然変異
-            if #anyIndice > 0 and mutation then
-                local mutationIndex = anyIndice[random(#anyIndice)]
+            if #sameIndice > 0 and mutation and not birthOrSurvive then
+                -- 全ての親で同じフラグのどれかを反転
+                local mutationIndex = sameIndice[random(#sameIndice)]
                 rule.survive[mutationIndex] = not rule.survive[mutationIndex]
                 mutated = true
             end
