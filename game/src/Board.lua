@@ -292,11 +292,10 @@ function Board:newCell(args)
     -- 遺伝
     local rule
     local color
-    if args.neighbors then
-        local neighbors = args.neighbors
-        local neighbor = neighbors[love.math.random(#neighbors)]
-        rule = deepcopy(neighbor.rule)
-        color = deepcopy(neighbor.color)
+    if args.parents then
+        local parent = args.parents[love.math.random(#args.parents)]
+        rule = deepcopy(parent.rule)
+        color = deepcopy(parent.color)
         color.hsv[2] = 1
     end
 
@@ -416,6 +415,20 @@ function Board:checkBirth(count, rule)
     return (rule or self.rule).birth[count + 1] == true
 end
 
+-- 隣人からセルが誕生するかどうかチェック
+function Board:checkBirthWithNeighbors(neighbors)
+    local parents = {}
+
+    local count = #neighbors
+    for _, neighbor in ipairs(neighbors) do
+        if self:checkBirth(count, neighbor.rule) then
+            table.insert(parents, neighbor)
+        end
+    end
+
+    return parents
+end
+
 -- 色の取得
 function Board:getColor(color)
     if color[1] then
@@ -475,9 +488,10 @@ function Board:step()
     -- 誕生するかチェック
     for x, column in pairs(candidates) do
         for y, candidate in pairs(column) do
-            if self:checkBirth(#candidate.neighbors) then
+            local parents = self:checkBirthWithNeighbors(candidate.neighbors)
+            if #parents > 0 then
                 -- 生まれる
-                local cell = self:entryNextGeneration(x, y, self:newCell{ neighbors = candidate.neighbors }, nextGenerations)
+                local cell = self:entryNextGeneration(x, y, self:newCell{ parents = parents }, nextGenerations)
                 self:renderTo(
                     function ()
                         love.graphics.setColor(self:getColor(cell.color or self.colors.live))
