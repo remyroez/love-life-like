@@ -24,16 +24,19 @@ function Game:load(...)
         height = 100,
         scale = 3,
         colors = {
-            --live = { 1, 1, 0 },
-            live = { hsv = { 1, 0, 1 } },
-            death = { 0, 0, 0 }
+            live = Board.newHSVColor(1, 0, 1),
+            death = Board.newHSVColor(0, 0, 0)
         },
-        rule = Board.newRule(true)
+        rule = Board.rules.life
     }
 
     -- ボードのランダム設定
     self.board:resetRandomizeCells()
     self.board:renderAllCells()
+
+    -- セル設置時の設定
+    self.rule = self.board.rule
+    self.color = self.board.colors.live
 
     -- 移動モード
     self.move = false
@@ -75,6 +78,50 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board:resetRandomizeCells()
         self.board:renderAllCells()
         self:resetTitle()
+    elseif key == '`' then
+        self.board:resetRandomizeCells(true, true)
+        self.board:renderAllCells()
+        self:resetTitle()
+    elseif key == '1' then
+        self.rule = Board.rules.life
+        self.color = Board.newHSVColor(1 / 9 * 0, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '2' then
+        self.rule = Board.rules.highLife
+        self.color = Board.newHSVColor(1 / 9 * 1, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '3' then
+        self.rule = Board.rules.mazectric
+        self.color = Board.newHSVColor(1 / 9 * 2, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '4' then
+        self.rule = Board.rules.replicator
+        self.color = Board.newHSVColor(1 / 9 * 3, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '5' then
+        self.rule = Board.rules.seeds
+        self.color = Board.newHSVColor(1 / 9 * 4, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '6' then
+        self.rule = Board.rules.bugs
+        self.color = Board.newHSVColor(1 / 9 * 5, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '7' then
+        self.rule = Board.rules._2x2
+        self.color = Board.newHSVColor(1 / 9 * 6, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '8' then
+        self.rule = Board.rules.stains
+        self.color = Board.newHSVColor(1 / 9 * 7, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '9' then
+        self.rule = Board.rules.lifeWithoutDeath
+        self.color = Board.newHSVColor(1 / 9 * 8, 1, 1)
+        self:resetTitle(self.rule)
+    elseif key == '0' then
+        self.rule = Board.newRule(true)
+        self.color = Board.newColor(true)
+        self:resetTitle(self.rule)
     end
 end
 
@@ -110,7 +157,7 @@ function Game:controls()
             -- 既にセルがある
         else
             -- セルが無いので描画
-            self.board:setCell(x, y, self.board:newCell{ color = { hsv = { love.math.random(), 1, 1 } } })
+            self.board:setCell(x, y, self.board:newCell{ rule = self.rule, color = self.color })
             self.board:renderCell(x, y)
         end
     elseif love.mouse.isDown(2) then
@@ -149,8 +196,8 @@ function Game:controls()
 end
 
 -- タイトルのリセット
-function Game:resetTitle()
-    love.window.setTitle('LIFE-LIKE - ' .. Board.ruleToString(self.board.rule))
+function Game:resetTitle(rule)
+    love.window.setTitle('LIFE-LIKE - ' .. Board.ruleToString(rule or self.board.rule))
 end
 
 return Game

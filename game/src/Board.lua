@@ -59,6 +59,16 @@ Board.static.newRule = function(randomize)
     }
 end
 
+-- 新HSVカラー
+Board.static.newHSVColor = function(h, s, v)
+    return { hsv = { h or 0, s or 1, v or 1 } }
+end
+
+-- 新カラー
+Board.static.newColor = function(randomize)
+    return randomize and Board.newHSVColor(love.math.random(), 1, 1) or Board.newHSVColor(1, 0, 1)
+end
+
 -- ルールを文字列化
 Board.static.ruleToString = function(rule)
     local buffer = 'B'
@@ -283,9 +293,10 @@ function Board:newCell(args)
     local rule
     local color
     if args.neighbors then
-        neighbors = args.neighbors
-        rule = deepcopy(neighbors[love.math.random(#neighbors)].rule)
-        color = deepcopy(neighbors[love.math.random(#neighbors)].color)
+        local neighbors = args.neighbors
+        local neighbor = neighbors[love.math.random(#neighbors)]
+        rule = deepcopy(neighbor.rule)
+        color = deepcopy(neighbor.color)
         color.hsv[2] = 1
     end
 
@@ -303,8 +314,9 @@ function Board:resetCells(cells)
 end
 
 -- セルをランダム配置
-function Board:resetRandomizeCells(randomColor)
+function Board:resetRandomizeCells(randomColor, randomRule)
     randomColor = randomColor == nil and true or randomColor
+    randomRule = randomRule ~= nil and randomRule or false
 
     self.cells = {}
 
@@ -315,7 +327,8 @@ function Board:resetRandomizeCells(randomColor)
                     x,
                     y,
                     self:newCell{
-                        color = randomColor and { hsv = { love.math.random(), 1, 1 } } or self.colors.live
+                        rule = randomRule and Board.newRule(true) or self.rule,
+                        color = randomColor and Board.newColor(true) or self.colors.live
                     }
                 )
             end
@@ -464,7 +477,7 @@ function Board:step()
         for y, candidate in pairs(column) do
             if self:checkBirth(#candidate.neighbors) then
                 -- 生まれる
-                local cell = self:entryNextGeneration(x, y, self:newCell{ color = color, neighbors = candidate.neighbors }, nextGenerations)
+                local cell = self:entryNextGeneration(x, y, self:newCell{ neighbors = candidate.neighbors }, nextGenerations)
                 self:renderTo(
                     function ()
                         love.graphics.setColor(self:getColor(cell.color or self.colors.live))
