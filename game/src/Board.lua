@@ -192,30 +192,29 @@ end
 
 -- ルールが一致しているか判定
 Board.static.checkRules = function(rules)
-    local checked = { 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any' }
+    local diffIndice = {}
     local sameIndice = {}
+    local diff
 
     -- 先頭ルールをベースにする
-    local base = rules[1]
-    for i = 1, #checked do
-        -- 先頭ルールのフラグをベースにする
-        checked[i] = tostring(base[i])
-
-        -- ベースフラグと一致しなかったら any
+    local baseRule = rules[1]
+    for i, baseFlag in ipairs(baseRule) do
+        -- ベースフラグと一致するかどうか
+        diff = false
         for j, rule in ipairs(rules) do
             if j > 1 then
-                if rule[i] ~= base[i] then
-                    checked[i] = 'any'
+                if rule[i] ~= baseFlag then
+                    diff = true
                     break
                 end
             end
         end
-        if checked[i] ~= 'any' then
-            table.insert(sameIndice, i)
-        end
+
+        -- 相違または一致テーブルに振り分ける
+        table.insert(diff and diffIndice or sameIndice, i)
     end
 
-    return checked, sameIndice
+    return diffIndice, sameIndice
 end
 
 -- ムーア近傍
@@ -443,7 +442,8 @@ end
 -- 交差
 function Board:crossover(parents)
     -- 親をランダムに選ぶ
-    local randomParent = parents[love.math.random(#parents)]
+    local numParents = #parents
+    local randomParent = parents[love.math.random(numParents)]
 
     -- 突然変異するかどうか
     local mutation = self.option.mutation and (random() <= self.option.mutationRate) or false
@@ -455,57 +455,53 @@ function Board:crossover(parents)
         -- 交差
 
         -- 新ルール
-        rule = Board.newRule()
+        rule = deepcopy(randomParent.rule)
 
-        -- それぞれのルールのリストアップ
-        local birthRules = {}
-        local surviveRules = {}
-        for _, parent in ipairs(parents) do
-            table.insert(birthRules, parent.rule.birth)
-            table.insert(surviveRules, parent.rule.survive)
-        end
+        if numParents == 1 then
+            -- 交差するほど数がいない
+        else
+            -- それぞれのルールのリストアップ
+            local birthRules = {}
+            local surviveRules = {}
+            for _, parent in ipairs(parents) do
+                table.insert(birthRules, parent.rule.birth)
+                table.insert(surviveRules, parent.rule.survive)
+            end
 
-        -- 誕生ルールの交差
-        do
-            -- 交差
-            local rules = {}
-            local checked, sameIndice = Board.checkRules(birthRules)
-            for i, check in ipairs(checked) do
-                if check == 'any' then
-                    rule.birth[i] = parents[random(#parents)].rule.birth[i]
-                else
-                    rule.birth[i] = check == 'true'
+            -- 誕生ルールの交差
+            do
+                -- 交差
+                local rules = {}
+                local diffIndice, sameIndice = Board.checkRules(birthRules)
+                for _, index in ipairs(diffIndice) do
+                    rule.birth[index] = parents[random(numParents)].rule.birth[index]
+                end
+
+                -- 突然変異
+                if #sameIndice > 0 and mutation and birthOrSurvive then
+                    -- 全ての親で同じフラグのどれかを反転
+                    local mutationIndex = sameIndice[random(#sameIndice)]
+                    rule.birth[mutationIndex] = not rule.birth[mutationIndex]
+                    mutated = true
                 end
             end
 
-            -- 突然変異
-            if #sameIndice > 0 and mutation and birthOrSurvive then
-                -- 全ての親で同じフラグのどれかを反転
-                local mutationIndex = sameIndice[random(#sameIndice)]
-                rule.birth[mutationIndex] = not rule.birth[mutationIndex]
-                mutated = true
-            end
-        end
-
-        -- 生存ルールの交差
-        do
-            -- 交差
-            local rules = {}
-            local checked, sameIndice = Board.checkRules(surviveRules)
-            for i, check in ipairs(checked) do
-                if check == 'any' then
-                    rule.survive[i] = parents[love.math.random(#parents)].rule.survive[i]
-                else
-                    rule.survive[i] = check == 'true'
+            -- 生存ルールの交差
+            do
+                -- 交差
+                local rules = {}
+                local diffIndice, sameIndice = Board.checkRules(surviveRules)
+                for _, index in ipairs(diffIndice) do
+                    rule.survive[index] = parents[random(numParents)].rule.survive[index]
                 end
-            end
 
-            -- 突然変異
-            if #sameIndice > 0 and mutation and not birthOrSurvive then
-                -- 全ての親で同じフラグのどれかを反転
-                local mutationIndex = sameIndice[random(#sameIndice)]
-                rule.survive[mutationIndex] = not rule.survive[mutationIndex]
-                mutated = true
+                -- 突然変異
+                if #sameIndice > 0 and mutation and not birthOrSurvive then
+                    -- 全ての親で同じフラグのどれかを反転
+                    local mutationIndex = sameIndice[random(#sameIndice)]
+                    rule.survive[mutationIndex] = not rule.survive[mutationIndex]
+                    mutated = true
+                end
             end
         end
     else
@@ -526,6 +522,9 @@ function Board:crossover(parents)
         if mutation then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
+        elseif numParents == 1 then
+            -- 交差するほど数がいない
+            color = deepcopy(randomParent.color)
         else
             -- 交差
             local colors = {}
@@ -551,7 +550,7 @@ function Board:crossover(parents)
 
     -- 突然変異ログ
     if mutation then
-        print('mutated!', Board.ruleToString(rule), unpack(color.hsv))
+        print('mutated!', Board.ruleToString(rule), color.hsv[1])
     end
 
     return rule, color
