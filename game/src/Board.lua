@@ -1,5 +1,6 @@
 
 local class = require 'middleclass'
+local fblove = require 'fblove_strip'
 
 -- アプリケーション
 local Board = class 'Board'
@@ -44,6 +45,21 @@ local function rgb2hsv(r, g, b)
     end
 
     return h, s, v
+end
+
+-- RGB カラーをビット変換
+local function rgb2bit(r, g, b, a)
+    r = r or 1
+    g = g or 1
+    b = b or 1
+    a = a or 1
+
+    return bit.bor(
+        bit.lshift(math.floor(a * 255), 24),
+        bit.lshift(math.floor(r * 255), 16),
+        bit.lshift(math.floor(g * 255), 8),
+        math.floor(b * 255)
+    )
 end
 
 -- 任意の数の RGB カラーをブレンド
@@ -254,6 +270,10 @@ function Board:initialize(args)
         live = { 1, 1, 1 },
     }
 
+    -- フレームバッファ
+    local sw, sh = love.graphics.getDimensions()
+    self.fb = fblove(args.width or sw, args.height or sh)
+
     -- リサイズ処理
     self:resize(args.width, args.height, args.scale)
 
@@ -328,8 +348,14 @@ function Board:togglePause()
 end
 
 -- キャンバスへ描画
-function Board:renderTo(...)
-    self.canvas:renderTo(...)
+function Board:renderTo(fn)
+    --self.canvas:renderTo(...)
+    fn(self)
+end
+
+-- フレームバッファ更新
+function Board:refresh()
+    self.fb.refresh()
 end
 
 -- リサイズ
@@ -341,7 +367,9 @@ function Board:resize(width, height, scale)
     self.scale = scale or self.scale or 1
 
     -- キャンバスの作成
-    self.canvas = love.graphics.newCanvas(self.width, self.height)
+    self.fb.reinit(self.width, self.height)
+    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.canvas = self.fb.get()
     self.canvas:setFilter('nearest', 'nearest')
     self.canvas:setWrap('repeat', 'repeat')
 
@@ -355,7 +383,7 @@ function Board:rescale(scale)
 
     -- 矩形のサイズ変更
     local sw, sh = love.graphics.getDimensions()
-    self.quad:setViewport(0, 0, (sw) / self.scale + self.width, (sh) / self.scale + self.height)
+    self.quad:setViewport(0, 0, sw / self.scale + self.width, sh / self.scale + self.height)
 
     -- オフセットの再設定
     self:setOffset(self.offset.x, self.offset.y)
@@ -557,40 +585,43 @@ function Board:resetRandomizeCells(randomColor, randomRule)
 end
 
 -- セルを描画
-function Board:renderCell(x, y)
-    self:renderTo(
-        function ()
-            local cell = self:getCell(x, y)
-            if cell then
-                love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-            else
-                love.graphics.setColor(self:getColor(self.colors.death))
-            end
-            love.graphics.points(x, y)
-        end
-    )
+function Board:renderPixel(x, y, rgb)
+    x = x and (x - 1) or 0
+    y = y and (y - 1) or 0
+    rgb = rgb or { 0, 0, 0 }
+    local pixel = self.fb.bufrgba[y][x]
+    if pixel then
+        pixel.r = math.floor(rgb[1] * 255)
+        pixel.g = math.floor(rgb[2] * 255)
+        pixel.b = math.floor(rgb[3] * 255)
+        pixel.a = 255
+    else
+        print('no pixel', x, y)
+    end
+end
+
+-- セルを描画
+function Board:renderCell(x, y, refresh)
+    refresh = refresh == nil and true or refresh
+
+    self:renderPixel(x, y, self:getCellColor(self:getCell(x, y)))
+
+    if refresh then self:refresh() end
 end
 
 -- セルをすべて描画
-function Board:renderAllCells()
-    self:renderTo(
-        function ()
-            love.graphics.clear(self:getColor(self.colors.death))
-            local points = {}
-            local cell = nil
-            for x = 1, self.width do
-                for y = 1, self.height do
-                    cell = self:getCell(x, y)
-                    if cell then
-                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                    else
-                        love.graphics.setColor(self:getColor(self.colors.death))
-                    end
-                    love.graphics.points(x, y)
-                end
-            end
+function Board:renderAllCells(refresh)
+    refresh = refresh == nil and true or refresh
+
+    self.fb.fill()
+
+    for x, column in pairs(self.cells) do
+        for y, cell in pairs(column) do
+            self:renderPixel(x, y, self:getCellColor(cell))
         end
-    )
+    end
+
+    if refresh then self:refresh() end
 end
 
 -- 候補者としてエントリー
@@ -668,8 +699,13 @@ function Board:getColor(color)
     elseif color.rgb then
         return color.rgb
     elseif color.hsv then
-        return hsv2rgb(unpack(color.hsv))
+        return { hsv2rgb(unpack(color.hsv)) }
     end
+end
+
+-- セル色の取得
+function Board:getCellColor(cell)
+    return self:getColor(cell and (cell.color or self.colors.live) or self.colors.death)
 end
 
 -- 次の世代へ進む
@@ -704,12 +740,7 @@ function Board:step()
                     if cell.color.hsv[2] > self.minLifeSaturation then
                         cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
                     end
-                    self:renderTo(
-                        function ()
-                            love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                            love.graphics.points(x, y)
-                        end
-                    )
+                    self:renderPixel(x, y, self:getCellColor(cell))
                 end
             else
                 -- 死ぬ
@@ -726,26 +757,20 @@ function Board:step()
             if #parents > 0 then
                 -- 生まれる
                 local cell = self:entryNextGeneration(x, y, self:newCell{ parents = parents }, nextGenerations)
-                self:renderTo(
-                    function ()
-                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                        love.graphics.points(x, y)
-                    end
-                )
+                self:renderPixel(x, y, self:getCellColor(cell))
             end
         end
     end
 
     -- 死者と誕生者を描画
-    self:renderTo(
-        function ()
-            love.graphics.setColor(self:getColor(self.colors.death))
-            love.graphics.points(deaths)
-        end
-    )
+    for i = 1, #deaths, 2 do
+        self:renderPixel(deaths[i], deaths[i + 1])
+    end
 
     -- 次の世代へ差し替える
     self.cells = nextGenerations
+
+    self:refresh()
 end
 
 return Board
