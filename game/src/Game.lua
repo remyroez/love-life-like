@@ -235,7 +235,9 @@ end
 
 -- タイトルのリセット
 function Game:resetTitle(rule)
-    love.window.setTitle('LIFE-LIKE - ' .. Board.ruleToString(rule or self.board.rule))
+    local strrule = Board.ruleToString(rule or self.board.rule)
+    love.window.setTitle('LIFE-LIKE - ' .. strrule)
+    print(strrule)
 end
 
 return Game
