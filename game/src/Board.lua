@@ -293,6 +293,7 @@ function Board:initialize(args)
     self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
     self.option.crossoverRate = args.option.mutationRate or 0.001
     self.option.mutationRate = args.option.mutationRate or 0.001
+    self.option.mutation = args.option.mutation == nil and true or args.option.mutation
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
@@ -445,7 +446,7 @@ function Board:crossover(parents)
     local randomParent = parents[love.math.random(#parents)]
 
     -- 突然変異するかどうか
-    local mutation = random() <= self.option.mutationRate
+    local mutation = self.option.mutation and (random() <= self.option.mutationRate) or false
     local birthOrSurvive = random(2) == 1
 
     -- ルール
@@ -683,7 +684,11 @@ end
 
 -- セルがまだ若いかどうか
 function Board:checkAge(cell)
-    if self.option.lifespanRandom then
+    if not self.option.aging then
+        return true
+    elseif not self.option.agingDeath then
+        return true
+    elseif self.option.lifespanRandom then
         -- 年をとるほど死にやすくなる
         return random() > cell.age / self.option.lifespan
     else
@@ -728,7 +733,7 @@ function Board:step()
                     count = count + 1
                 end
             end
-            if self:checkSurvive(count, cell.rule) and (not self.option.agingDeath and true or self:checkAge(cell)) then
+            if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
                 -- 生き残る
                 cell.age = cell.age + 1
 
