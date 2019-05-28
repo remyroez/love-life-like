@@ -12,6 +12,7 @@ local screenshot
 
 -- ゲーム
 local game = (require 'Game')()
+game:setDebugMode(debugMode)
 
 -- ホットスワップ後の対応
 if lurker then
@@ -62,9 +63,18 @@ function love.keypressed(key, scancode, isrepeat)
     elseif key == 'f12' then
         -- デバッグモード切り替え
         debugMode = not debugMode
+
+        -- アプリケーションのデバッグモード切り替え
+        game:setDebugMode(debugMode)
     else
+        -- アプリケーションへ渡す
         game:keypressed(key, scancode, isrepeat)
     end
+end
+
+-- キー離した
+function love.keyreleased(...)
+    game:keyreleased(...)
 end
 
 -- マウス入力
@@ -72,9 +82,24 @@ function love.mousepressed(...)
     game:mousepressed(...)
 end
 
+-- マウス離した
+function love.mousereleased(...)
+    game:mousereleased(...)
+end
+
+-- マウス移動
+function love.mousemoved(...)
+    game:mousemoved(...)
+end
+
 -- マウスホイール
 function love.wheelmoved(...)
     game:wheelmoved(...)
+end
+
+-- テキスト入力
+function love.textinput(...)
+    game:textinput(...)
 end
 
 -- フォーカス
