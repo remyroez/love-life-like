@@ -22,7 +22,7 @@ function Game:load(...)
     self.board = Board {
         width = 100,
         height = 100,
-        scale = 3,
+        scale = 1,
         colors = {
             live = Board.newHSVColor(1, 0, 1),
             death = Board.newHSVColor(0, 0, 0)
@@ -32,10 +32,11 @@ function Game:load(...)
             crossoverRule = true,
             crossoverColor = false,
             crossoverRate = 0.00001,
-            mutationRate = 0.00001,
+            mutationRate = 0.000001,
+            mutation = false,
             aging = false,
-            agingColor = false,
-            agingDeath = false,
+            agingColor = true,
+            agingDeath = true,
             lifespan = 100,
             lifespanRandom = false,
             lifeSaturation = 0.75,
@@ -84,6 +85,9 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == 'x' then
         self.randomRule = not self.randomRule
         print('randomRule', self.randomRule)
+    elseif key == 'm' then
+        self.board.option.mutation = not self.board.option.mutation
+        print('mutation', self.board.option.mutation)
     elseif key == 'c' then
         self.board.option.crossoverColor = not self.board.option.crossoverColor
         print('crossoverColor', self.board.option.crossoverColor)
@@ -231,7 +235,9 @@ end
 
 -- タイトルのリセット
 function Game:resetTitle(rule)
-    love.window.setTitle('LIFE-LIKE - ' .. Board.ruleToString(rule or self.board.rule))
+    local strrule = Board.ruleToString(rule or self.board.rule)
+    love.window.setTitle('LIFE-LIKE - ' .. strrule)
+    print(strrule)
 end
 
 return Game

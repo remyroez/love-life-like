@@ -1,5 +1,6 @@
 
 local class = require 'middleclass'
+local fblove = require 'fblove_strip'
 
 -- アプリケーション
 local Board = class 'Board'
@@ -44,6 +45,21 @@ local function rgb2hsv(r, g, b)
     end
 
     return h, s, v
+end
+
+-- RGB カラーをビット変換
+local function rgb2bit(r, g, b, a)
+    r = r or 1
+    g = g or 1
+    b = b or 1
+    a = a or 1
+
+    return bit.bor(
+        bit.lshift(math.floor(a * 255), 24),
+        bit.lshift(math.floor(r * 255), 16),
+        bit.lshift(math.floor(g * 255), 8),
+        math.floor(b * 255)
+    )
 end
 
 -- 任意の数の RGB カラーをブレンド
@@ -176,30 +192,29 @@ end
 
 -- ルールが一致しているか判定
 Board.static.checkRules = function(rules)
-    local checked = { 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any', 'any' }
+    local diffIndice = {}
     local sameIndice = {}
+    local diff
 
     -- 先頭ルールをベースにする
-    local base = rules[1]
-    for i = 1, #checked do
-        -- 先頭ルールのフラグをベースにする
-        checked[i] = tostring(base[i])
-
-        -- ベースフラグと一致しなかったら any
+    local baseRule = rules[1]
+    for i, baseFlag in ipairs(baseRule) do
+        -- ベースフラグと一致するかどうか
+        diff = false
         for j, rule in ipairs(rules) do
             if j > 1 then
-                if rule[i] ~= base[i] then
-                    checked[i] = 'any'
+                if rule[i] ~= baseFlag then
+                    diff = true
                     break
                 end
             end
         end
-        if checked[i] ~= 'any' then
-            table.insert(sameIndice, i)
-        end
+
+        -- 相違または一致テーブルに振り分ける
+        table.insert(diff and diffIndice or sameIndice, i)
     end
 
-    return checked, sameIndice
+    return diffIndice, sameIndice
 end
 
 -- ムーア近傍
@@ -254,6 +269,10 @@ function Board:initialize(args)
         live = { 1, 1, 1 },
     }
 
+    -- フレームバッファ
+    local sw, sh = love.graphics.getDimensions()
+    self.fb = fblove(args.width or sw, args.height or sh)
+
     -- リサイズ処理
     self:resize(args.width, args.height, args.scale)
 
@@ -273,6 +292,7 @@ function Board:initialize(args)
     self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
     self.option.crossoverRate = args.option.mutationRate or 0.001
     self.option.mutationRate = args.option.mutationRate or 0.001
+    self.option.mutation = args.option.mutation == nil and true or args.option.mutation
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
@@ -328,8 +348,14 @@ function Board:togglePause()
 end
 
 -- キャンバスへ描画
-function Board:renderTo(...)
-    self.canvas:renderTo(...)
+function Board:renderTo(fn)
+    --self.canvas:renderTo(...)
+    fn(self)
+end
+
+-- フレームバッファ更新
+function Board:refresh()
+    self.fb.refresh()
 end
 
 -- リサイズ
@@ -341,7 +367,9 @@ function Board:resize(width, height, scale)
     self.scale = scale or self.scale or 1
 
     -- キャンバスの作成
-    self.canvas = love.graphics.newCanvas(self.width, self.height)
+    self.fb.reinit(self.width, self.height)
+    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.canvas = self.fb.get()
     self.canvas:setFilter('nearest', 'nearest')
     self.canvas:setWrap('repeat', 'repeat')
 
@@ -355,7 +383,7 @@ function Board:rescale(scale)
 
     -- 矩形のサイズ変更
     local sw, sh = love.graphics.getDimensions()
-    self.quad:setViewport(0, 0, (sw) / self.scale + self.width, (sh) / self.scale + self.height)
+    self.quad:setViewport(0, 0, sw / self.scale + self.width, sh / self.scale + self.height)
 
     -- オフセットの再設定
     self:setOffset(self.offset.x, self.offset.y)
@@ -414,10 +442,11 @@ end
 -- 交差
 function Board:crossover(parents)
     -- 親をランダムに選ぶ
-    local randomParent = parents[love.math.random(#parents)]
+    local numParents = #parents
+    local randomParent = parents[love.math.random(numParents)]
 
     -- 突然変異するかどうか
-    local mutation = random() <= self.option.mutationRate
+    local mutation = self.option.mutation and (random() <= self.option.mutationRate) or false
     local birthOrSurvive = random(2) == 1
 
     -- ルール
@@ -426,57 +455,53 @@ function Board:crossover(parents)
         -- 交差
 
         -- 新ルール
-        rule = Board.newRule()
+        rule = deepcopy(randomParent.rule)
 
-        -- それぞれのルールのリストアップ
-        local birthRules = {}
-        local surviveRules = {}
-        for _, parent in ipairs(parents) do
-            table.insert(birthRules, parent.rule.birth)
-            table.insert(surviveRules, parent.rule.survive)
-        end
+        if numParents == 1 then
+            -- 交差するほど数がいない
+        else
+            -- それぞれのルールのリストアップ
+            local birthRules = {}
+            local surviveRules = {}
+            for _, parent in ipairs(parents) do
+                table.insert(birthRules, parent.rule.birth)
+                table.insert(surviveRules, parent.rule.survive)
+            end
 
-        -- 誕生ルールの交差
-        do
-            -- 交差
-            local rules = {}
-            local checked, sameIndice = Board.checkRules(birthRules)
-            for i, check in ipairs(checked) do
-                if check == 'any' then
-                    rule.birth[i] = parents[random(#parents)].rule.birth[i]
-                else
-                    rule.birth[i] = check == 'true'
+            -- 誕生ルールの交差
+            do
+                -- 交差
+                local rules = {}
+                local diffIndice, sameIndice = Board.checkRules(birthRules)
+                for _, index in ipairs(diffIndice) do
+                    rule.birth[index] = parents[random(numParents)].rule.birth[index]
+                end
+
+                -- 突然変異
+                if #sameIndice > 0 and mutation and birthOrSurvive then
+                    -- 全ての親で同じフラグのどれかを反転
+                    local mutationIndex = sameIndice[random(#sameIndice)]
+                    rule.birth[mutationIndex] = not rule.birth[mutationIndex]
+                    mutated = true
                 end
             end
 
-            -- 突然変異
-            if #sameIndice > 0 and mutation and birthOrSurvive then
-                -- 全ての親で同じフラグのどれかを反転
-                local mutationIndex = sameIndice[random(#sameIndice)]
-                rule.birth[mutationIndex] = not rule.birth[mutationIndex]
-                mutated = true
-            end
-        end
-
-        -- 生存ルールの交差
-        do
-            -- 交差
-            local rules = {}
-            local checked, sameIndice = Board.checkRules(surviveRules)
-            for i, check in ipairs(checked) do
-                if check == 'any' then
-                    rule.survive[i] = parents[love.math.random(#parents)].rule.survive[i]
-                else
-                    rule.survive[i] = check == 'true'
+            -- 生存ルールの交差
+            do
+                -- 交差
+                local rules = {}
+                local diffIndice, sameIndice = Board.checkRules(surviveRules)
+                for _, index in ipairs(diffIndice) do
+                    rule.survive[index] = parents[random(numParents)].rule.survive[index]
                 end
-            end
 
-            -- 突然変異
-            if #sameIndice > 0 and mutation and not birthOrSurvive then
-                -- 全ての親で同じフラグのどれかを反転
-                local mutationIndex = sameIndice[random(#sameIndice)]
-                rule.survive[mutationIndex] = not rule.survive[mutationIndex]
-                mutated = true
+                -- 突然変異
+                if #sameIndice > 0 and mutation and not birthOrSurvive then
+                    -- 全ての親で同じフラグのどれかを反転
+                    local mutationIndex = sameIndice[random(#sameIndice)]
+                    rule.survive[mutationIndex] = not rule.survive[mutationIndex]
+                    mutated = true
+                end
             end
         end
     else
@@ -497,6 +522,9 @@ function Board:crossover(parents)
         if mutation then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
+        elseif numParents == 1 then
+            -- 交差するほど数がいない
+            color = deepcopy(randomParent.color)
         else
             -- 交差
             local colors = {}
@@ -522,7 +550,7 @@ function Board:crossover(parents)
 
     -- 突然変異ログ
     if mutation then
-        print('mutated!', Board.ruleToString(rule), unpack(color.hsv))
+        print('mutated!', Board.ruleToString(rule), color.hsv[1])
     end
 
     return rule, color
@@ -557,40 +585,43 @@ function Board:resetRandomizeCells(randomColor, randomRule)
 end
 
 -- セルを描画
-function Board:renderCell(x, y)
-    self:renderTo(
-        function ()
-            local cell = self:getCell(x, y)
-            if cell then
-                love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-            else
-                love.graphics.setColor(self:getColor(self.colors.death))
-            end
-            love.graphics.points(x, y)
-        end
-    )
+function Board:renderPixel(x, y, rgb)
+    x = x and (x - 1) or 0
+    y = y and (y - 1) or 0
+    rgb = rgb or { 0, 0, 0 }
+    local pixel = self.fb.bufrgba[y][x]
+    if pixel then
+        pixel.r = math.floor(rgb[1] * 255)
+        pixel.g = math.floor(rgb[2] * 255)
+        pixel.b = math.floor(rgb[3] * 255)
+        pixel.a = 255
+    else
+        print('no pixel', x, y)
+    end
+end
+
+-- セルを描画
+function Board:renderCell(x, y, refresh)
+    refresh = refresh == nil and true or refresh
+
+    self:renderPixel(x, y, self:getCellColor(self:getCell(x, y)))
+
+    if refresh then self:refresh() end
 end
 
 -- セルをすべて描画
-function Board:renderAllCells()
-    self:renderTo(
-        function ()
-            love.graphics.clear(self:getColor(self.colors.death))
-            local points = {}
-            local cell = nil
-            for x = 1, self.width do
-                for y = 1, self.height do
-                    cell = self:getCell(x, y)
-                    if cell then
-                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                    else
-                        love.graphics.setColor(self:getColor(self.colors.death))
-                    end
-                    love.graphics.points(x, y)
-                end
-            end
+function Board:renderAllCells(refresh)
+    refresh = refresh == nil and true or refresh
+
+    self.fb.fill()
+
+    for x, column in pairs(self.cells) do
+        for y, cell in pairs(column) do
+            self:renderPixel(x, y, self:getCellColor(cell))
         end
-    )
+    end
+
+    if refresh then self:refresh() end
 end
 
 -- 候補者としてエントリー
@@ -652,7 +683,11 @@ end
 
 -- セルがまだ若いかどうか
 function Board:checkAge(cell)
-    if self.option.lifespanRandom then
+    if not self.option.aging then
+        return true
+    elseif not self.option.agingDeath then
+        return true
+    elseif self.option.lifespanRandom then
         -- 年をとるほど死にやすくなる
         return random() > cell.age / self.option.lifespan
     else
@@ -668,8 +703,13 @@ function Board:getColor(color)
     elseif color.rgb then
         return color.rgb
     elseif color.hsv then
-        return hsv2rgb(unpack(color.hsv))
+        return { hsv2rgb(unpack(color.hsv)) }
     end
+end
+
+-- セル色の取得
+function Board:getCellColor(cell)
+    return self:getColor(cell and (cell.color or self.colors.live) or self.colors.death)
 end
 
 -- 次の世代へ進む
@@ -692,7 +732,7 @@ function Board:step()
                     count = count + 1
                 end
             end
-            if self:checkSurvive(count, cell.rule) and (not self.option.agingDeath and true or self:checkAge(cell)) then
+            if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
                 -- 生き残る
                 cell.age = cell.age + 1
 
@@ -704,12 +744,7 @@ function Board:step()
                     if cell.color.hsv[2] > self.minLifeSaturation then
                         cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
                     end
-                    self:renderTo(
-                        function ()
-                            love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                            love.graphics.points(x, y)
-                        end
-                    )
+                    self:renderPixel(x, y, self:getCellColor(cell))
                 end
             else
                 -- 死ぬ
@@ -726,26 +761,20 @@ function Board:step()
             if #parents > 0 then
                 -- 生まれる
                 local cell = self:entryNextGeneration(x, y, self:newCell{ parents = parents }, nextGenerations)
-                self:renderTo(
-                    function ()
-                        love.graphics.setColor(self:getColor(cell.color or self.colors.live))
-                        love.graphics.points(x, y)
-                    end
-                )
+                self:renderPixel(x, y, self:getCellColor(cell))
             end
         end
     end
 
     -- 死者と誕生者を描画
-    self:renderTo(
-        function ()
-            love.graphics.setColor(self:getColor(self.colors.death))
-            love.graphics.points(deaths)
-        end
-    )
+    for i = 1, #deaths, 2 do
+        self:renderPixel(deaths[i], deaths[i + 1])
+    end
 
     -- 次の世代へ差し替える
     self.cells = nextGenerations
+
+    self:refresh()
 end
 
 return Board
