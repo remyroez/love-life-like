@@ -48,6 +48,7 @@ function Game:load(...)
         },
         pause = false
     }
+    self.baseRuleString = Board.ruleToString(self.board.rule)
 
     -- セル設置時の設定
     self.color = self.board.colors.live
@@ -127,7 +128,18 @@ function Game:updateDebug(dt, ...)
     self.focusUI = Window.IsObstructedAtMouse()
 end
 
+local function separator()
+    Slab.BeginColumn(1)
+    Slab.Separator()
+    Slab.EndColumn()
+    Slab.BeginColumn(2)
+    Slab.Separator()
+    Slab.EndColumn()
+end
+
 local checkbox = function (t, name, label)
+    local changed = false
+
     Slab.BeginColumn(1)
     Slab.Text(label or name or '')
     Slab.EndColumn()
@@ -135,8 +147,11 @@ local checkbox = function (t, name, label)
     Slab.BeginColumn(2)
     if Slab.CheckBox(t[name], '', { Id = name or label or '' }) then
         t[name] = not t[name]
+        changed = true
     end
     Slab.EndColumn()
+
+    return changed
 end
 
 local inputNumber = function (t, name, label, min, max)
@@ -162,30 +177,85 @@ local inputNumber = function (t, name, label, min, max)
     return changed
 end
 
+local function ruleCheckBoxes(rule)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text('Birth')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    for i, flag in ipairs(rule.birth) do
+        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' birth[' .. i .. ']' }) then
+            rule.birth[i] = not rule.birth[i]
+            changed = true
+        end
+        Slab.SameLine()
+    end
+    Slab.EndColumn()
+
+    Slab.BeginColumn(1)
+    Slab.Text('Survive')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    Slab.NewLine()
+    for i, flag in ipairs(rule.survive) do
+        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' survive[' .. i .. ']' }) then
+            rule.survive[i] = not rule.survive[i]
+            changed = true
+        end
+        Slab.SameLine()
+    end
+    Slab.NewLine()
+    Slab.EndColumn()
+
+    return changed
+end
+
 -- デバッグ更新
 function Game:ruleWindow()
     Slab.BeginWindow('Rule', { Title = "Rule", Columns = 2 })
+
+    if ruleCheckBoxes(self.board.rule) then
+        self.baseRuleString = Board.ruleToString(self.board.rule)
+    end
+
+    Slab.BeginColumn(1)
+    Slab.Text('Rulestrings')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    if Slab.Input('rulestrings', { Text = self.baseRuleString, ReturnOnText = false }) then
+        self.board.rule = Board.stringToRule(Slab.GetInputText())
+        self.baseRuleString = Board.ruleToString(self.board.rule)
+    end
+    Slab.EndColumn()
+
+    separator()
 
     -- オプション
     local option = self.board.option
     checkbox(option, 'crossover', 'Crossover')
     checkbox(option, 'crossoverRule', 'Crossover Rule')
     checkbox(option, 'crossoverColor', 'Crossover Color')
-    --Slab.Text('crossoverRate')
-    --Slab.Separator()
+    separator()
+
     checkbox(option, 'mutation', 'Mutation')
     inputNumber(option, 'mutationRate', 'Mutation Rate', 0, 1)
-    --Slab.Separator()
+    separator()
+
     checkbox(option, 'aging', 'Aging')
     checkbox(option, 'agingColor', 'Aging Color')
     checkbox(option, 'agingDeath', 'Aging Death')
-    --Slab.Separator()
+    separator()
+
     if inputNumber(option, 'lifespan', 'Lifespan', 0) then
         option.lifespan = math.floor(option.lifespan)
         self.board:updateLifespanOption()
     end
     checkbox(option, 'lifespanRandom', 'Lifespan Random')
-    if inputNumber(option, 'lifeSaturation', 'Lifespand Saturation', 0, 1) then
+    if inputNumber(option, 'lifeSaturation', 'Lifespan Saturation', 0, 1) then
         self.board:updateLifespanOption()
     end
 
