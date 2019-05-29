@@ -66,6 +66,8 @@ function Game:load(...)
 
     -- ＵＩ
     self.focusUI = false
+    self.editColor = nil
+    self.beforeColor = nil
 
     self:resetTitle()
 end
@@ -177,6 +179,25 @@ local inputNumber = function (t, name, label, min, max)
     return changed
 end
 
+local function buttonColor(color, name)
+    local activate = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local x, y = Slab.GetCursorPos()
+    local h = Slab.GetStyle().Font:getHeight()
+    Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(color.hsv)) }, Outline = true })
+    Slab.SetCursorPos(x, y)
+	activate = Slab.Button("", { Invisible = true, W = ww, H = h })
+    Slab.EndColumn()
+
+    return activate
+end
+
 local function ruleCheckBoxes(rule)
     local changed = false
 
@@ -213,14 +234,16 @@ local function ruleCheckBoxes(rule)
     return changed
 end
 
--- デバッグ更新
+-- ルールウィンドウ
 function Game:ruleWindow()
     Slab.BeginWindow('Rule', { Title = "Rule", Columns = 2 })
 
+    -- ルールチェックボックス
     if ruleCheckBoxes(self.board.rule) then
         self.baseRuleString = Board.ruleToString(self.board.rule)
     end
 
+    -- ルール文字列
     Slab.BeginColumn(1)
     Slab.Text('Rulestrings')
     Slab.EndColumn()
@@ -231,6 +254,20 @@ function Game:ruleWindow()
         self.baseRuleString = Board.ruleToString(self.board.rule)
     end
     Slab.EndColumn()
+
+    separator()
+
+    -- カラー（生）
+    if buttonColor(self.board.colors.live, 'Live Color') then
+        self.editColor = self.board.colors.live
+        self.beforeColor = Board.deepcopy(self.editColor)
+    end
+
+    -- カラー（死）
+    if buttonColor(self.board.colors.death, 'Death Color') then
+        self.editColor = self.board.colors.death
+        self.beforeColor = Board.deepcopy(self.editColor)
+    end
 
     separator()
 
@@ -260,6 +297,47 @@ function Game:ruleWindow()
     end
 
     Slab.EndWindow()
+
+    -- カラーエディット
+    if self.editColor then
+        Slab.BeginWindow('ColorEdit', { Title = "HSV Color Edit", Columns = 2 })
+
+        local ww, wh = Slab.GetWindowActiveSize()
+        local h = Slab.GetStyle().Font:getHeight()
+        Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(self.editColor.hsv)) }, Outline = true })
+
+        local changed = false
+        if inputNumber(self.editColor.hsv, 1, 'Hue', 0, 1) then
+            changed = true
+        end
+        if inputNumber(self.editColor.hsv, 2, 'Saturation', 0, 1) then
+            changed = true
+        end
+        if inputNumber(self.editColor.hsv, 3, 'Value', 0, 1) then
+            changed = true
+        end
+
+        Slab.Separator()
+        if Slab.Button("OK", {AlignRight = true}) then
+            self.editColor = nil
+            changed = true
+        end
+        Slab.SameLine()
+        if Slab.Button("Cancel", {AlignRight = true}) then
+            self.editColor.hsv[1] = self.beforeColor.hsv[1]
+            self.editColor.hsv[2] = self.beforeColor.hsv[2]
+            self.editColor.hsv[3] = self.beforeColor.hsv[3]
+            self.editColor = nil
+            self.beforeColor = nil
+            changed = true
+        end
+
+        if changed then
+            self.board:renderAllCells()
+        end
+
+        Slab.EndWindow()
+    end
 end
 
 -- デバッグ描画
