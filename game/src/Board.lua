@@ -428,7 +428,7 @@ function Board:newCell(args)
     -- 遺伝
     local rule
     local color
-    if args.parents and self.option.crossover then
+    if args.parents then
         rule, color = self:crossover(args.parents)
     end
 
@@ -452,7 +452,7 @@ function Board:crossover(parents)
 
     -- ルール
     local rule
-    if self.option.crossoverRule then
+    if self.option.crossover and self.option.crossoverRule then
         -- 交差
 
         -- 新ルール
@@ -511,14 +511,14 @@ function Board:crossover(parents)
             -- 突然変異
             rule = Board.newRule(true)
         else
-            -- 交差
+            -- コピー
             rule = deepcopy(randomParent.rule)
         end
     end
 
     -- 色
     local color
-    if self.option.crossoverColor then
+    if self.option.crossover and self.option.crossoverColor then
         -- 交差
         if mutation then
             -- 突然変異
@@ -542,7 +542,7 @@ function Board:crossover(parents)
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
         else
-            -- 交差
+            -- コピー
             color = deepcopy(randomParent.color)
         end
         color.hsv[2] = 1
