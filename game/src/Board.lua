@@ -288,11 +288,12 @@ function Board:initialize(args)
 
     -- 遺伝オプション
     self.option = args.option or {}
+    self.option.crossover = args.option.crossover == nil and true or args.option.crossover
     self.option.crossoverRule = args.option.crossoverRule == nil and true or args.option.crossoverRule
     self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
     self.option.crossoverRate = args.option.mutationRate or 0.001
-    self.option.mutationRate = args.option.mutationRate or 0.001
     self.option.mutation = args.option.mutation == nil and true or args.option.mutation
+    self.option.mutationRate = args.option.mutationRate or 0.001
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
@@ -347,10 +348,10 @@ function Board:togglePause()
     self.pause = not self.pause
 end
 
--- キャンバスへ描画
-function Board:renderTo(fn)
-    --self.canvas:renderTo(...)
-    fn(self)
+-- 寿命関連の設定を更新
+function Board:updateLifespanOption()
+    self.minLifeSaturation = 1 - self.option.lifeSaturation
+    self.lifeSaturationUnit = 1 / self.option.lifespan
 end
 
 -- フレームバッファ更新
@@ -427,7 +428,7 @@ function Board:newCell(args)
     -- 遺伝
     local rule
     local color
-    if args.parents then
+    if args.parents and self.option.crossover then
         rule, color = self:crossover(args.parents)
     end
 
