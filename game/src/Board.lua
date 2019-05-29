@@ -56,9 +56,9 @@ local function rgb2bit(r, g, b, a)
 
     return bit.bor(
         bit.lshift(math.floor(a * 255), 24),
-        bit.lshift(math.floor(r * 255), 16),
+        bit.lshift(math.floor(b * 255), 16),
         bit.lshift(math.floor(g * 255), 8),
-        math.floor(b * 255)
+        math.floor(r * 255)
     )
 end
 
@@ -121,6 +121,10 @@ local random = love.math.random
 local function randomBool()
     return random(2) == 1
 end
+
+Board.static.hsv2rgb = hsv2rgb
+Board.static.rgb2hsv = rgb2hsv
+Board.static.deepcopy = deepcopy
 
 -- 新ルール
 Board.static.newRule = function(randomize)
@@ -614,6 +618,7 @@ end
 function Board:renderAllCells(refresh)
     refresh = refresh == nil and true or refresh
 
+    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
     self.fb.fill()
 
     for x, column in pairs(self.cells) do
@@ -767,9 +772,9 @@ function Board:step()
         end
     end
 
-    -- 死者と誕生者を描画
+    -- 死者を描画
     for i = 1, #deaths, 2 do
-        self:renderPixel(deaths[i], deaths[i + 1])
+        self:renderPixel(deaths[i], deaths[i + 1], self:getColor(self.colors.death))
     end
 
     -- 次の世代へ差し替える
