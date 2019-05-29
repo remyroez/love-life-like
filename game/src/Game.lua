@@ -1,5 +1,7 @@
 
 local class = require 'middleclass'
+local Slab = require 'Slab'
+local Window = require('Slab.Internal.UI.Window')
 
 -- クラス
 local Application = require 'Application'
@@ -11,6 +13,9 @@ local Game = class('Game', Application)
 -- 初期化
 function Game:initialize(...)
     Application.initialize(self, ...)
+
+    love.keyboard.setKeyRepeat(true)
+    Slab.Initialize()
 end
 
 -- 読み込み
@@ -58,11 +63,19 @@ function Game:load(...)
     self.moveOrigin = { x = 0, y = 0 }
     self.offsetOrigin = { x = 0, y = 0 }
 
+    -- ＵＩ
+    self.focusUI = false
+
     self:resetTitle()
 end
 
 -- 更新
 function Game:update(dt, ...)
+    -- デバッグＵＩ
+    if self.debugMode then
+        self:updateDebug(dt, ...)
+    end
+
     -- 操作
     self:controls()
 
@@ -72,12 +85,123 @@ end
 
 -- 描画
 function Game:draw(...)
+    -- ボード描画
     self.board:draw()
+
+    -- デバッグＵＩ
+    if self.debugMode then
+        self:drawDebug(...)
+    end
+end
+
+-- デバッグ更新
+function Game:updateDebug(dt, ...)
+    Slab.Update(dt)
+
+    -- メインメニューバー
+    if Slab.BeginMainMenuBar() then
+        -- ファイル
+        if Slab.BeginMenu("File") then
+            if Slab.MenuItem("New") then
+            end
+            if Slab.MenuItem("Open") then
+            end
+            if Slab.MenuItem("Save") then
+            end
+            if Slab.MenuItem("Save As") then
+            end
+
+            Slab.Separator()
+
+            if Slab.MenuItem("Quit") then
+                love.event.quit()
+            end
+
+            Slab.EndMenu()
+        end
+        Slab.EndMainMenuBar()
+    end
+
+    self:ruleWindow()
+
+    self.focusUI = Window.IsObstructedAtMouse()
+end
+
+local checkbox = function (t, name, label)
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    if Slab.CheckBox(t[name], '', { Id = name or label or '' }) then
+        t[name] = not t[name]
+    end
+    Slab.EndColumn()
+end
+
+local inputNumber = function (t, name, label, min, max)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    if Slab.Input(name, { Text = tostring(t[name]), ReturnOnText = false, NumbersOnly = true }) then
+        local n = tonumber(Slab.GetInputText())
+        if min and n < min then
+            n = min
+        elseif max and n > max then
+            n = max
+        end
+        t[name] = n
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
+-- デバッグ更新
+function Game:ruleWindow()
+    Slab.BeginWindow('Rule', { Title = "Rule", Columns = 2 })
+
+    -- オプション
+    local option = self.board.option
+    checkbox(option, 'crossover', 'Crossover')
+    checkbox(option, 'crossoverRule', 'Crossover Rule')
+    checkbox(option, 'crossoverColor', 'Crossover Color')
+    --Slab.Text('crossoverRate')
+    --Slab.Separator()
+    checkbox(option, 'mutation', 'Mutation')
+    inputNumber(option, 'mutationRate', 'Mutation Rate', 0, 1)
+    --Slab.Separator()
+    checkbox(option, 'aging', 'Aging')
+    checkbox(option, 'agingColor', 'Aging Color')
+    checkbox(option, 'agingDeath', 'Aging Death')
+    --Slab.Separator()
+    if inputNumber(option, 'lifespan', 'Lifespan', 0) then
+        option.lifespan = math.floor(option.lifespan)
+        self.board:updateLifespanOption()
+    end
+    checkbox(option, 'lifespanRandom', 'Lifespan Random')
+    if inputNumber(option, 'lifeSaturation', 'Lifespand Saturation', 0, 1) then
+        self.board:updateLifespanOption()
+    end
+
+    Slab.EndWindow()
+end
+
+-- デバッグ描画
+function Game:drawDebug(...)
+    Slab.Draw()
 end
 
 -- キー入力
 function Game:keypressed(key, scancode, isrepeat)
-    if key == 'return' then
+    if self.debugMode and self.focusUI then
+        -- debug
+    elseif key == 'return' then
         self.board:togglePause()
     elseif key == 'z' then
         self.randomColor = not self.randomColor
@@ -156,13 +280,46 @@ function Game:keypressed(key, scancode, isrepeat)
     end
 end
 
+-- キー離した
+function Game:keyreleased(key, scancode)
+    if self.debugMode and self.focusUI then
+        -- debug
+    end
+end
+
+-- テキスト入力
+function Game:textinput(text)
+    if self.debugMode and self.focusUI then
+        -- imgui
+    end
+end
+
 -- マウス入力
 function Game:mousepressed(x, y, button, istouch, presses)
+    if self.debugMode and self.focusUI then
+        -- imgui
+    end
+end
+
+-- マウス離した
+function Game:mousereleased(x, y, button, istouch, presses)
+    if self.debugMode and self.focusUI then
+        -- imgui
+    end
+end
+
+-- マウス移動
+function Game:mousemoved(x, y, dx, dy, istouch)
+    if self.debugMode and self.focusUI then
+        -- imgui
+    end
 end
 
 -- マウスホイール
 function Game:wheelmoved(x, y)
-    if y < 0 and self.board.scale > 1 then
+    if self.debugMode and self.focusUI then
+        -- imgui
+    elseif y < 0 and self.board.scale > 1 then
         -- ズームアウト
         self.board:rescale(self.board.scale - 1)
     elseif y > 0 and self.board.scale < 10 then
@@ -179,6 +336,8 @@ end
 
 -- 操作
 function Game:controls()
+    if self.debugMode and self.focusUI then return end
+
     if love.mouse.isDown(1) then
         -- メインボタン
         local x, y = self.board:toLocalPositions(love.mouse.getPosition())
