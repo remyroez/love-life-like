@@ -219,6 +219,68 @@ function Game:load(...)
     self.focusUI = false
     self.editColor = nil
     self.beforeColor = nil
+    self.windows = {
+        control = true,
+        rule = true,
+    }
+
+    -- プリセットルール
+    self.rules = {
+        {
+            title = 'Conway\'s Game of Life',
+            rulestring = 'B3/S23'
+        },
+        {
+            title = 'HighLife',
+            rulestring = 'B36/S23'
+        },
+        {
+            title = 'Maze',
+            rulestring = 'B3/S12345'
+        },
+        {
+            title = 'Mazectric',
+            rulestring = 'B3/S1234'
+        },
+        {
+            title = 'Replicator',
+            rulestring = 'B1357/S1357'
+        },
+        {
+            title = 'Seeds',
+            rulestring = 'B2/S'
+        },
+        {
+            title = 'Life without death',
+            rulestring = 'B3/S012345678'
+        },
+        {
+            title = 'Bugs',
+            rulestring = 'B3567/S15678'
+        },
+        {
+            title = '2x2',
+            rulestring = 'B36/S125'
+        },
+        {
+            title = 'Stains',
+            rulestring = 'B3678/S235678'
+        },
+        {
+            title = 'Day & Night',
+            rulestring = 'B3678/S34678'
+        },
+        {
+            title = 'Bacteria',
+            rulestring = 'B34/S456'
+        },
+        {
+            title = 'Diamoeba',
+            rulestring = 'B35678/S5678'
+        },
+    }
+    self.selectedRule = nil
+    self.selectedRule = self.rules[1].title .. ' (' .. self.rules[1].rulestring .. ')'
 
     self:resetTitle()
 end
@@ -273,11 +335,22 @@ function Game:updateDebug(dt, ...)
 
             Slab.EndMenu()
         end
+
+        -- ウィンドウ
+        if Slab.BeginMenu("Windows") then
+            if Slab.MenuItemChecked("Control", self.windows.control) then
+                self.windows.control = not self.windows.control
+            end
+            if Slab.MenuItemChecked("Rule", self.windows.rule) then
+                self.windows.rule = not self.windows.rule
+            end
+            Slab.EndMenu()
+        end
         Slab.EndMainMenuBar()
     end
 
-    self:controlWindow()
-    self:ruleWindow()
+    if self.windows.control then self:controlWindow() end
+    if self.windows.rule then self:ruleWindow() end
 
     -- カラーエディット
     if self.editColor then
@@ -325,13 +398,27 @@ function Game:controlWindow()
         self.board:renderAllCells()
     end
 
-    -- ルール
+    -- ルールプリセット
+    if Slab.BeginComboBox('ControlRulePresets', { Selected = self.selectedRule or 'Rule Presets',  W = ww }) then
+        for i, t in ipairs(self.rules) do
+            if Slab.TextSelectable(t.title .. ' (' .. t.rulestring .. ')') then
+                self.rule = Board.stringToRule(t.rulestring)
+                self.rulestring = Board.ruleToString(self.rule)
+                self.selectedRule = t.title .. ' (' .. t.rulestring .. ')'
+            end
+        end
+        Slab.EndComboBox()
+    end
+    -- ルールチェックボックス
     if checkboxesRule(self.rule) then
         self.rulestring = Board.ruleToString(self.rule)
+        self.selectedRule = nil
     end
+    -- ルール文字列
     if inputRulestrings(self.rulestring) then
         self.rule = Board.stringToRule(Slab.GetInputText())
         self.rulestring = Board.ruleToString(self.rule)
+        self.selectedRule = nil
     end
 
     separator()
@@ -351,9 +438,11 @@ function Game:controlWindow()
     if Slab.BeginContextMenuWindow() then
         if Slab.MenuItem('Randomize rule') then
             self:randomizeRule()
+            self.selectedRule = nil
         end
         if Slab.MenuItem('Randomize color') then
             self:randomizeColor()
+            self.selectedRule = nil
         end
 
         Slab.EndContextMenu()
