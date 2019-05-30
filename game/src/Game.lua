@@ -10,6 +10,155 @@ local Board = require 'Board'
 -- ゲーム
 local Game = class('Game', Application)
 
+-- セパレータ
+local function separator(n)
+    n = n or 2
+    for i = 1, n do
+        Slab.BeginColumn(i)
+        Slab.Separator()
+        Slab.EndColumn()
+    end
+end
+
+-- ボタン
+local function button(label)
+    local activate = false
+
+    Slab.BeginColumn(1)
+    Slab.NewLine()
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local h = Slab.GetStyle().Font:getHeight()
+    if Slab.Button(label, { W = ww, H = h }) then
+        activate = true
+    end
+    Slab.EndColumn()
+
+    return activate
+end
+
+-- チェックボックス
+local function checkbox(t, name, label)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    if Slab.CheckBox(t[name], '', { Id = name or label or '' }) then
+        t[name] = not t[name]
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
+-- 入力欄（数字）
+local function inputNumber(t, name, label, min, max)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local h = Slab.GetStyle().Font:getHeight()
+    if Slab.Input(name, { Text = tostring(t[name]), ReturnOnText = false, NumbersOnly = true, W = ww, H = h }) then
+        local n = tonumber(Slab.GetInputText())
+        if min and n < min then
+            n = min
+        elseif max and n > max then
+            n = max
+        end
+        t[name] = n
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
+-- カラーボタン
+local function buttonColor(color, name)
+    local activate = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local x, y = Slab.GetCursorPos()
+    local h = Slab.GetStyle().Font:getHeight()
+    Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(color.hsv)) }, Outline = true })
+    Slab.SetCursorPos(x, y)
+	activate = Slab.Button("", { Invisible = true, W = ww, H = h })
+    Slab.EndColumn()
+
+    return activate
+end
+
+-- ルールのチェックボックス
+local function checkboxesRule(rule)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text('Birth')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    for i, flag in ipairs(rule.birth) do
+        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' birth[' .. i .. ']' }) then
+            rule.birth[i] = not rule.birth[i]
+            changed = true
+        end
+        Slab.SameLine()
+    end
+    Slab.EndColumn()
+
+    Slab.BeginColumn(1)
+    Slab.Text('Survive')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    Slab.NewLine()
+    for i, flag in ipairs(rule.survive) do
+        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' survive[' .. i .. ']' }) then
+            rule.survive[i] = not rule.survive[i]
+            changed = true
+        end
+        Slab.SameLine()
+    end
+    Slab.NewLine()
+    Slab.EndColumn()
+
+    return changed
+end
+
+-- ルール文字列入力欄
+local function inputRulestrings(rulestring, label)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or 'Rulestrings')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local h = Slab.GetStyle().Font:getHeight()
+    if Slab.Input('rulestrings', { Text = rulestring, ReturnOnText = false, W = ww, H = h }) then
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
 -- 初期化
 function Game:initialize(...)
     Application.initialize(self, ...)
@@ -29,13 +178,13 @@ function Game:load(...)
         height = 100,
         scale = 1,
         colors = {
-            live = Board.newHSVColor(1, 0, 1),
+            live = Board.newHSVColor(0, 1, 1),
             death = Board.newHSVColor(0, 0, 0)
         },
-        rule = Board.rules.life,
+        rule = Board.deepcopy(Board.rules.life),
         option = {
-            crossoverRule = true,
-            crossoverColor = false,
+            crossoverRule = false,
+            crossoverColor = true,
             crossoverRate = 0.00001,
             mutationRate = 0.000001,
             mutation = false,
@@ -51,7 +200,9 @@ function Game:load(...)
     self.baseRuleString = Board.ruleToString(self.board.rule)
 
     -- セル設置時の設定
-    self.color = self.board.colors.live
+    self.rule = Board.deepcopy(Board.rules.life)
+    self.rulestring = Board.ruleToString(self.rule)
+    self.color = Board.deepcopy(self.board.colors.live)
     self.randomColor = true
     self.randomRule = false
 
@@ -125,135 +276,104 @@ function Game:updateDebug(dt, ...)
         Slab.EndMainMenuBar()
     end
 
+    self:controlWindow()
     self:ruleWindow()
+
+    -- カラーエディット
+    if self.editColor then
+        if self:colorEditWindow() then
+            self.board:renderAllCells()
+        end
+    end
 
     self.focusUI = Window.IsObstructedAtMouse()
 end
 
-local function separator()
-    Slab.BeginColumn(1)
-    Slab.Separator()
-    Slab.EndColumn()
-    Slab.BeginColumn(2)
-    Slab.Separator()
-    Slab.EndColumn()
-end
+-- セルウィンドウ
+function Game:controlWindow()
+    Slab.BeginWindow('Control', { Title = "Control", Columns = 2 })
 
-local checkbox = function (t, name, label)
-    local changed = false
+    local ww, wh = Slab.GetWindowActiveSize()
+    local buttonOption = { W = ww / 4 - 4 }
 
-    Slab.BeginColumn(1)
-    Slab.Text(label or name or '')
-    Slab.EndColumn()
-
-    Slab.BeginColumn(2)
-    if Slab.CheckBox(t[name], '', { Id = name or label or '' }) then
-        t[name] = not t[name]
-        changed = true
+    -- ポーズ
+    if Slab.Button(self.board.pause and 'Play' or 'Pause', buttonOption) then
+        self.board:togglePause()
     end
-    Slab.EndColumn()
 
-    return changed
-end
+    -- ステップ
+    Slab.SameLine()
+    if Slab.Button('Step', buttonOption) then
+        self.board.pause = true
+        self.board:step()
+    end
 
-local inputNumber = function (t, name, label, min, max)
-    local changed = false
+    -- リセット
+    Slab.SameLine()
+    if Slab.Button('Reset', buttonOption) then
+        self.board:resetAllCells(
+            self.randomRule and function () return Board.newRule(true) end or self.rule,
+            self.randomColor and function () return Board.newColor(true) end or self.color
+        )
+        self.board:renderAllCells()
+    end
 
-    Slab.BeginColumn(1)
-    Slab.Text(label or name or '')
-    Slab.EndColumn()
+    -- クリア
+    Slab.SameLine()
+    if Slab.Button('Clear', buttonOption) then
+        self.board:resetCells()
+        self.board:renderAllCells()
+    end
 
-    Slab.BeginColumn(2)
-    if Slab.Input(name, { Text = tostring(t[name]), ReturnOnText = false, NumbersOnly = true }) then
-        local n = tonumber(Slab.GetInputText())
-        if min and n < min then
-            n = min
-        elseif max and n > max then
-            n = max
+    -- ルール
+    if checkboxesRule(self.rule) then
+        self.rulestring = Board.ruleToString(self.rule)
+    end
+    if inputRulestrings(self.rulestring) then
+        self.rule = Board.stringToRule(Slab.GetInputText())
+        self.rulestring = Board.ruleToString(self.rule)
+    end
+
+    separator()
+
+    -- カラー
+    if buttonColor(self.color, 'Color') then
+        self.editColor = self.color
+        self.beforeColor = Board.deepcopy(self.editColor)
+    end
+
+    separator()
+
+    checkbox(self, 'randomColor', 'Random Color')
+    checkbox(self, 'randomRule', 'Random Rule')
+
+    -- コンテキストメニュー
+    if Slab.BeginContextMenuWindow() then
+        if Slab.MenuItem('Randomize rule') then
+            self:randomizeRule()
         end
-        t[name] = n
-        changed = true
-    end
-    Slab.EndColumn()
-
-    return changed
-end
-
-local function buttonColor(color, name)
-    local activate = false
-
-    Slab.BeginColumn(1)
-    Slab.Text(name or '')
-    Slab.EndColumn()
-
-    Slab.BeginColumn(2)
-	local ww, wh = Slab.GetWindowActiveSize()
-    local x, y = Slab.GetCursorPos()
-    local h = Slab.GetStyle().Font:getHeight()
-    Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(color.hsv)) }, Outline = true })
-    Slab.SetCursorPos(x, y)
-	activate = Slab.Button("", { Invisible = true, W = ww, H = h })
-    Slab.EndColumn()
-
-    return activate
-end
-
-local function ruleCheckBoxes(rule)
-    local changed = false
-
-    Slab.BeginColumn(1)
-    Slab.Text('Birth')
-    Slab.EndColumn()
-
-    Slab.BeginColumn(2)
-    for i, flag in ipairs(rule.birth) do
-        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' birth[' .. i .. ']' }) then
-            rule.birth[i] = not rule.birth[i]
-            changed = true
+        if Slab.MenuItem('Randomize color') then
+            self:randomizeColor()
         end
-        Slab.SameLine()
+
+        Slab.EndContextMenu()
     end
-    Slab.EndColumn()
 
-    Slab.BeginColumn(1)
-    Slab.Text('Survive')
-    Slab.EndColumn()
-
-    Slab.BeginColumn(2)
-    Slab.NewLine()
-    for i, flag in ipairs(rule.survive) do
-        if Slab.CheckBox(flag, '', { Id = tostring(rule) .. ' survive[' .. i .. ']' }) then
-            rule.survive[i] = not rule.survive[i]
-            changed = true
-        end
-        Slab.SameLine()
-    end
-    Slab.NewLine()
-    Slab.EndColumn()
-
-    return changed
+    Slab.EndWindow()
 end
 
 -- ルールウィンドウ
 function Game:ruleWindow()
     Slab.BeginWindow('Rule', { Title = "Rule", Columns = 2 })
 
-    -- ルールチェックボックス
-    if ruleCheckBoxes(self.board.rule) then
+    -- コモンルール
+    if checkboxesRule(self.board.rule) then
         self.baseRuleString = Board.ruleToString(self.board.rule)
     end
-
-    -- ルール文字列
-    Slab.BeginColumn(1)
-    Slab.Text('Rulestrings')
-    Slab.EndColumn()
-
-    Slab.BeginColumn(2)
-    if Slab.Input('rulestrings', { Text = self.baseRuleString, ReturnOnText = false }) then
+    if inputRulestrings(self.baseRuleString) then
         self.board.rule = Board.stringToRule(Slab.GetInputText())
         self.baseRuleString = Board.ruleToString(self.board.rule)
     end
-    Slab.EndColumn()
 
     separator()
 
@@ -297,47 +417,52 @@ function Game:ruleWindow()
     end
 
     Slab.EndWindow()
+end
 
-    -- カラーエディット
-    if self.editColor then
-        Slab.BeginWindow('ColorEdit', { Title = "HSV Color Edit", Columns = 2 })
+-- ルールウィンドウ
+function Game:colorEditWindow(id, title)
+    local changed = false
 
-        local ww, wh = Slab.GetWindowActiveSize()
-        local h = Slab.GetStyle().Font:getHeight()
-        Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(self.editColor.hsv)) }, Outline = true })
+    Slab.BeginWindow(id or 'ColorEdit', { Title = title or 'HSV Color Edit', Columns = 2 })
 
-        local changed = false
-        if inputNumber(self.editColor.hsv, 1, 'Hue', 0, 1) then
-            changed = true
-        end
-        if inputNumber(self.editColor.hsv, 2, 'Saturation', 0, 1) then
-            changed = true
-        end
-        if inputNumber(self.editColor.hsv, 3, 'Value', 0, 1) then
-            changed = true
-        end
+    -- 色見本
+    local ww, wh = Slab.GetWindowActiveSize()
+    local h = Slab.GetStyle().Font:getHeight()
+    Slab.Rectangle({ W = 300, H = h, Color = { Board.hsv2rgb(unpack(self.editColor.hsv)) }, Outline = true })
 
-        Slab.Separator()
-        if Slab.Button("OK", {AlignRight = true}) then
-            self.editColor = nil
-            changed = true
-        end
-        Slab.SameLine()
-        if Slab.Button("Cancel", {AlignRight = true}) then
-            self.editColor.hsv[1] = self.beforeColor.hsv[1]
-            self.editColor.hsv[2] = self.beforeColor.hsv[2]
-            self.editColor.hsv[3] = self.beforeColor.hsv[3]
-            self.editColor = nil
-            self.beforeColor = nil
-            changed = true
-        end
-
-        if changed then
-            self.board:renderAllCells()
-        end
-
-        Slab.EndWindow()
+    -- 各パラメータ
+    if inputNumber(self.editColor.hsv, 1, 'Hue', 0, 1) then
+        changed = true
     end
+    if inputNumber(self.editColor.hsv, 2, 'Saturation', 0, 1) then
+        changed = true
+    end
+    if inputNumber(self.editColor.hsv, 3, 'Value', 0, 1) then
+        changed = true
+    end
+
+    Slab.Separator()
+
+    -- ＯＫ
+    if Slab.Button("OK", {AlignRight = true}) then
+        self.editColor = nil
+        changed = true
+    end
+
+    -- キャンセル
+    Slab.SameLine()
+    if Slab.Button("Cancel", {AlignRight = true}) then
+        self.editColor.hsv[1] = self.beforeColor.hsv[1]
+        self.editColor.hsv[2] = self.beforeColor.hsv[2]
+        self.editColor.hsv[3] = self.beforeColor.hsv[3]
+        self.editColor = nil
+        self.beforeColor = nil
+        changed = true
+    end
+
+    Slab.EndWindow()
+
+    return changed
 end
 
 -- デバッグ描画
@@ -351,21 +476,6 @@ function Game:keypressed(key, scancode, isrepeat)
         -- debug
     elseif key == 'return' then
         self.board:togglePause()
-    elseif key == 'z' then
-        self.randomColor = not self.randomColor
-        print('randomColor', self.randomColor)
-    elseif key == 'x' then
-        self.randomRule = not self.randomRule
-        print('randomRule', self.randomRule)
-    elseif key == 'm' then
-        self.board.option.mutation = not self.board.option.mutation
-        print('mutation', self.board.option.mutation)
-    elseif key == 'c' then
-        self.board.option.crossoverColor = not self.board.option.crossoverColor
-        print('crossoverColor', self.board.option.crossoverColor)
-    elseif key == 'r' then
-        self.board.option.crossoverRule = not self.board.option.crossoverRule
-        print('crossoverRule', self.board.option.crossoverRule)
     elseif key == 'space' or key == 's' then
         self.board.pause = true
         self.board:step()
@@ -482,6 +592,32 @@ function Game:resize(width, height)
     self.board:rescale()
 end
 
+-- ルールをランダム設定
+function Game:randomizeRule()
+    self.rule = Board.newRule(true)
+    self.rulestring = Board.ruleToString(self.rule)
+end
+
+-- 色をランダム設定
+function Game:randomizeColor()
+    local newColor = Board.newColor(true)
+    if self.editColor == self.color then
+        self.editColor = newColor
+    end
+    self.color = newColor
+end
+
+-- ルールと色をランダム設定
+function Game:randomizeRuleAndColor()
+    if self.randomRule then
+        self:randomizeRule()
+    end
+
+    if self.randomColor then
+        self:randomizeColor()
+    end
+end
+
 -- 操作
 function Game:controls()
     if self.debugMode and self.focusUI then return end
@@ -495,12 +631,14 @@ function Game:controls()
             -- 既にセルがある
         else
             -- セルが無いので描画
+            self:randomizeRuleAndColor()
+
             self.board:setCell(
                 x,
                 y,
                 self.board:newCell{
-                    rule = self.randomRule and Board.newRule(true) or nil,
-                    color = self.randomColor and Board.newColor(true) or nil
+                    rule = self.rule,
+                    color = self.color
                 }
             )
             self.board:renderCell(x, y)
