@@ -118,8 +118,8 @@ end
 local random = love.math.random
 
 -- ランダム真偽値
-local function randomBool()
-    return random(2) == 1
+local function randomBool(n)
+    return random(n or 2) == 1
 end
 
 Board.static.hsv2rgb = hsv2rgb
@@ -438,8 +438,8 @@ function Board:newCell(args)
 
     -- 新規
     return {
-        rule = rule or args.rule or self.rule,
-        color = color or args.color or deepcopy(self.colors.live),
+        rule = rule or deepcopy(args.rule) or deepcopy(self.rule),
+        color = color or deepcopy(args.color) or deepcopy(self.colors.live),
         age = 0,
     }
 end
@@ -564,6 +564,26 @@ end
 -- セルをリセット
 function Board:resetCells(cells)
     self.cells = cells or {}
+end
+
+-- セルを全て配置
+function Board:resetAllCells(rule, color, div)
+    self.cells = {}
+
+    for x = 1, self.width do
+        for y = 1, self.height do
+            if randomBool(div) then
+                self:setCell(
+                    x,
+                    y,
+                    self:newCell{
+                        rule = (type(rule) == 'function') and rule() or rule,
+                        color = (type(color) == 'function') and color() or color
+                    }
+                )
+            end
+        end
+    end
 end
 
 -- セルをランダム配置
