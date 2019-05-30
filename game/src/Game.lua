@@ -278,6 +278,10 @@ function Game:load(...)
             title = 'Diamoeba',
             rulestring = 'B35678/S5678'
         },
+        {
+            title = 'Wall',
+            rulestring = 'B/S012345678'
+        },
     }
     self.selectedRule = nil
     self.selectedRule = self.rules[1].title .. ' (' .. self.rules[1].rulestring .. ')'
@@ -438,11 +442,9 @@ function Game:controlWindow()
     if Slab.BeginContextMenuWindow() then
         if Slab.MenuItem('Randomize rule') then
             self:randomizeRule()
-            self.selectedRule = nil
         end
         if Slab.MenuItem('Randomize color') then
             self:randomizeColor()
-            self.selectedRule = nil
         end
 
         Slab.EndContextMenu()
@@ -685,6 +687,7 @@ end
 function Game:randomizeRule()
     self.rule = Board.newRule(true)
     self.rulestring = Board.ruleToString(self.rule)
+    self.selectedRule = nil
 end
 
 -- 色をランダム設定
