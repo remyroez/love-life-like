@@ -239,8 +239,8 @@ function Board:initialize(args)
 
     -- カラー
     self.colors = args.colors or {
-        death = { 0, 0, 0 },
-        live = { 1, 1, 1 },
+        live = Board.newHSVColor(0, 1, 1),
+        death = Board.newHSVColor(0, 0, 0)
     }
 
     -- フレームバッファ
