@@ -261,13 +261,14 @@ function Board:initialize(args)
     self:setOffset(0, 0)
 
     -- 遺伝オプション
-    self.option = args.option or {}
-    self.option.crossover = args.option.crossover == nil and true or args.option.crossover
-    self.option.crossoverRule = args.option.crossoverRule == nil and true or args.option.crossoverRule
-    self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
+    args.option = args.option or {}
+    self.option = args.option
+    self.option.crossover = args.option.crossover ~= nil and args.option.crossover or false
+    self.option.crossoverRule = args.option.crossoverRule ~= nil and args.option.crossoverRule or false
+    self.option.crossoverColor = args.option.crossoverColor ~= nil and args.option.crossoverColor or false
     self.option.crossoverRate = args.option.mutationRate or 0.001
-    self.option.mutation = args.option.mutation == nil and true or args.option.mutation
-    self.option.mutationRate = args.option.mutationRate or 0.001
+    self.option.mutation = args.option.mutation ~= nil and args.option.mutation or false
+    self.option.mutationRate = args.option.mutationRate or 0.000001
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
