@@ -10,6 +10,13 @@ local Board = require 'Board'
 -- ゲーム
 local Game = class('Game', Application)
 
+-- スペーサー
+local function spacer(w, h)
+    local x, y = Slab.GetCursorPos()
+    Slab.Button('', { Invisible = true, W = w, H = h })
+    Slab.SetCursorPos(x, y)
+end
+
 -- セパレータ
 local function separator(n)
     n = n or 2
@@ -358,11 +365,12 @@ function Game:updateDebug(dt, ...)
             if Slab.MenuItemChecked("Control", self.windows.control) then
                 self.windows.control = not self.windows.control
             end
-            if Slab.MenuItemChecked("Rule", self.windows.rule) then
+            if Slab.MenuItemChecked("Optional Rule", self.windows.rule) then
                 self.windows.rule = not self.windows.rule
             end
             Slab.EndMenu()
         end
+
         Slab.EndMainMenuBar()
     end
 
@@ -547,7 +555,9 @@ end
 
 -- ルールウィンドウ
 function Game:ruleWindow()
-    Slab.BeginWindow('Rule', { Title = "Rule", Columns = 2 })
+    Slab.BeginWindow('Rule', { Title = "Optional Rule", Columns = 2 })
+
+    --[[
 
     -- コモンルール
     if checkboxesRule(self.board.rule) then
@@ -573,6 +583,10 @@ function Game:ruleWindow()
     end
 
     separator()
+
+    --]]
+
+    spacer(300)
 
     -- オプション
     local option = self.board.option
