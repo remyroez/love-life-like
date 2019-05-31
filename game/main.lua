@@ -53,7 +53,7 @@ function love.keypressed(key, scancode, isrepeat)
         love.event.quit()
     elseif key == 'printscreen' then
         -- スクリーンショット
-        love.graphics.captureScreenshot(os.time() .. ".png")
+        love.graphics.captureScreenshot('screenshot/' .. os.time() .. '.png')
     elseif key == 'f1' and debugMode and lurker then
         -- スキャン
         lurker.scan()
