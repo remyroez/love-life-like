@@ -165,6 +165,15 @@ function Game:initialize(...)
 
     love.keyboard.setKeyRepeat(true)
     Slab.Initialize()
+
+    -- board フォルダ準備
+    self.savable = false
+    local dir = love.filesystem.getInfo('board', 'directory')
+    if dir == nil then
+        self.savable = love.filesystem.createDirectory('board')
+    else
+        self.savable = true
+    end
 end
 
 -- 読み込み
@@ -238,28 +247,18 @@ function Game:load(...)
     self.board = Board {
         width = 100,
         height = 100,
-        scale = 1,
-        colors = {
-            live = Board.newHSVColor(0, 1, 1),
-            death = Board.newHSVColor(0, 0, 0)
-        },
-        rule = Board.stringToRule(self.rules[1].rulestring),
-        option = {
-            crossoverRule = false,
-            crossoverColor = true,
-            crossoverRate = 0.00001,
-            mutationRate = 0.000001,
-            mutation = false,
-            aging = false,
-            agingColor = true,
-            agingDeath = true,
-            lifespan = 100,
-            lifespanRandom = false,
-            lifeSaturation = 0.75,
-        },
         pause = false
     }
     self.baseRuleString = Board.ruleToString(self.board.rule)
+
+    -- ボード保存関連
+    self.filename = nil
+    self.newBoardArgsTemplate = {
+        width = self.board.width,
+        height = self.board.height,
+        option = Board.deepcopy(self.board.option),
+    }
+    self.newBoardArgs = nil
 
     -- セル設置時の設定
     self.rule = Board.deepcopy(self.board.rule)
@@ -323,12 +322,26 @@ function Game:updateDebug(dt, ...)
         -- ファイル
         if Slab.BeginMenu("File") then
             if Slab.MenuItem("New") then
+                self.board.pause = true
+                self.newBoardArgs = Board.deepcopy(self.newBoardArgsTemplate)
+                Slab.OpenDialog('New')
             end
-            if Slab.MenuItem("Open") then
-            end
-            if Slab.MenuItem("Save") then
-            end
-            if Slab.MenuItem("Save As") then
+            if self.savable then
+                if Slab.MenuItem("Open") then
+                    self.board.pause = true
+                    Slab.OpenDialog('Open')
+                end
+                if Slab.MenuItem("Save") then
+                    if self.filename then
+                    else
+                        self.board.pause = true
+                        Slab.OpenDialog('Save')
+                    end
+                end
+                if Slab.MenuItem("Save As") then
+                    self.board.pause = true
+                    Slab.OpenDialog('Save')
+                end
             end
 
             Slab.Separator()
@@ -353,6 +366,10 @@ function Game:updateDebug(dt, ...)
         Slab.EndMainMenuBar()
     end
 
+    self:newDialog()
+    self:openDialog()
+    self:saveDialog()
+
     if self.windows.control then self:controlWindow() end
     if self.windows.rule then self:ruleWindow() end
 
@@ -366,7 +383,82 @@ function Game:updateDebug(dt, ...)
     self.focusUI = Window.IsObstructedAtMouse()
 end
 
--- セルウィンドウ
+-- 新規ダイアログ
+function Game:newDialog()
+    if Slab.BeginDialog('New', { Title = 'New Board', Columns = 2 }) then
+        -- ダイアログの幅が設定できないので、透明ボタンで強制設定
+        local x, y = Slab.GetCursorPos()
+        Slab.Button('', { Invisible = true, W = 400 })
+        Slab.SetCursorPos(x, y)
+
+        -- サイズ
+        local args = self.newBoardArgs
+        if inputNumber(args, 'width', 'Width', 1) then
+            args.width = math.floor(args.width)
+        end
+        if inputNumber(args, 'height', 'Height', 1) then
+            args.height = math.floor(args.height)
+        end
+
+        separator()
+
+        -- オプション
+        local option = args.option
+        checkbox(option, 'crossover', 'Crossover')
+        checkbox(option, 'crossoverRule', 'Crossover Rule')
+        checkbox(option, 'crossoverColor', 'Crossover Color')
+        separator()
+
+        checkbox(option, 'mutation', 'Mutation')
+        inputNumber(option, 'mutationRate', 'Mutation Rate', 0, 1)
+        separator()
+
+        checkbox(option, 'aging', 'Aging')
+        checkbox(option, 'agingColor', 'Aging Color')
+        checkbox(option, 'agingDeath', 'Aging Death')
+        separator()
+
+        if inputNumber(option, 'lifespan', 'Lifespan', 0) then
+            option.lifespan = math.floor(option.lifespan)
+        end
+        checkbox(option, 'lifespanRandom', 'Lifespan Random')
+        inputNumber(option, 'lifeSaturation', 'Lifespan Saturation', 0, 1)
+
+        Slab.Separator()
+
+        if Slab.Button('Create', {AlignRight = true}) then
+            self:resetBoard()
+            Slab.CloseDialog()
+        end
+        Slab.SameLine()
+        if Slab.Button('Cancel', {AlignRight = true}) then
+            Slab.CloseDialog()
+        end
+        Slab.EndDialog()
+    end
+end
+
+-- 開くダイアログ
+function Game:resetBoard()
+    self.board = Board {
+        width = self.newBoardArgs.width,
+        height = self.newBoardArgs.height,
+        option = self.newBoardArgs.option,
+        pause = true
+    }
+    self.baseRuleString = Board.ruleToString(self.board.rule)
+    self.filename = nil
+end
+
+-- 開くダイアログ
+function Game:openDialog()
+end
+
+-- 保存ダイアログ
+function Game:saveDialog()
+end
+
+-- 操作ウィンドウ
 function Game:controlWindow()
     Slab.BeginWindow('Control', { Title = "Control", Columns = 2 })
 
