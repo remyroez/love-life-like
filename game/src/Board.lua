@@ -268,6 +268,8 @@ function Board:initialize(args)
     self.option.crossoverColor = args.option.crossoverColor ~= nil and args.option.crossoverColor or false
     self.option.crossoverRate = args.option.mutationRate or 0.001
     self.option.mutation = args.option.mutation ~= nil and args.option.mutation or false
+    self.option.mutationRule = args.option.mutationRule ~= nil and args.option.mutationRule or false
+    self.option.mutationColor = args.option.mutationColor ~= nil and args.option.mutationColor or false
     self.option.mutationRate = args.option.mutationRate or 0.000001
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
@@ -472,7 +474,7 @@ function Board:crossover(parents)
                 end
 
                 -- 突然変異
-                if #sameIndice > 0 and mutation and not birthOrSurvive then
+                if #sameIndice > 0 and mutation and self.option.mutationRule and not birthOrSurvive then
                     -- 全ての親で同じフラグのどれかを反転
                     local mutationIndex = sameIndice[random(#sameIndice)]
                     rule.survive[mutationIndex] = not rule.survive[mutationIndex]
@@ -482,7 +484,7 @@ function Board:crossover(parents)
         end
     else
         -- クローン
-        if mutation then
+        if mutation and self.option.mutationRule then
             -- 突然変異
             rule = Board.newRule(true)
         else
@@ -495,7 +497,7 @@ function Board:crossover(parents)
     local color
     if self.option.crossover and self.option.crossoverColor then
         -- 交差
-        if mutation then
+        if mutation and self.option.mutationColor then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
         elseif numParents == 1 then
@@ -516,7 +518,7 @@ function Board:crossover(parents)
         color.hsv[3] = 1
     else
         -- クローン
-        if mutation then
+        if mutation and self.option.mutationColor then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
         else
