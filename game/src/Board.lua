@@ -505,7 +505,10 @@ function Board:crossover(parents)
             -- 交差
             local colors = {}
             for _, parent in ipairs(parents) do
-                table.insert(colors, parent.color.hsv)
+                local hsv = deepcopy(parent.color.hsv)
+                hsv[2] = 1
+                hsv[3] = 1
+                table.insert(colors, hsv)
             end
             color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
         end
