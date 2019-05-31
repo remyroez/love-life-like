@@ -418,6 +418,8 @@ function Game:newDialog()
         separator()
 
         checkbox(option, 'mutation', 'Mutation')
+        checkbox(option, 'mutationRule', 'Mutation Rule')
+        checkbox(option, 'mutationColor', 'Mutation Color')
         inputNumber(option, 'mutationRate', 'Mutation Rate', 0, 1)
         separator()
 
@@ -596,6 +598,8 @@ function Game:ruleWindow()
     separator()
 
     checkbox(option, 'mutation', 'Mutation')
+    checkbox(option, 'mutationRule', 'Mutation Rule')
+    checkbox(option, 'mutationColor', 'Mutation Color')
     inputNumber(option, 'mutationRate', 'Mutation Rate', 0, 1)
     separator()
 
