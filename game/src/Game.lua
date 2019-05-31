@@ -172,58 +172,6 @@ function Game:load(...)
     -- スクリーンサイズ
     self.width, self.height = love.graphics.getDimensions()
 
-    -- ボード初期化
-    self.board = Board {
-        width = 100,
-        height = 100,
-        scale = 1,
-        colors = {
-            live = Board.newHSVColor(0, 1, 1),
-            death = Board.newHSVColor(0, 0, 0)
-        },
-        rule = Board.deepcopy(Board.rules.life),
-        option = {
-            crossoverRule = false,
-            crossoverColor = true,
-            crossoverRate = 0.00001,
-            mutationRate = 0.000001,
-            mutation = false,
-            aging = false,
-            agingColor = true,
-            agingDeath = true,
-            lifespan = 100,
-            lifespanRandom = false,
-            lifeSaturation = 0.75,
-        },
-        pause = false
-    }
-    self.baseRuleString = Board.ruleToString(self.board.rule)
-
-    -- セル設置時の設定
-    self.rule = Board.deepcopy(Board.rules.life)
-    self.rulestring = Board.ruleToString(self.rule)
-    self.color = Board.deepcopy(self.board.colors.live)
-    self.randomColor = true
-    self.randomRule = false
-
-    -- ボードのランダム設定
-    self.board:resetRandomizeCells(self.randomColor, self.randomRule)
-    self.board:renderAllCells()
-
-    -- 移動モード
-    self.move = false
-    self.moveOrigin = { x = 0, y = 0 }
-    self.offsetOrigin = { x = 0, y = 0 }
-
-    -- ＵＩ
-    self.focusUI = false
-    self.editColor = nil
-    self.beforeColor = nil
-    self.windows = {
-        control = true,
-        rule = true,
-    }
-
     -- プリセットルール
     self.rules = {
         {
@@ -285,6 +233,58 @@ function Game:load(...)
     }
     self.selectedRule = nil
     self.selectedRule = self.rules[1].title .. ' (' .. self.rules[1].rulestring .. ')'
+
+    -- ボード初期化
+    self.board = Board {
+        width = 100,
+        height = 100,
+        scale = 1,
+        colors = {
+            live = Board.newHSVColor(0, 1, 1),
+            death = Board.newHSVColor(0, 0, 0)
+        },
+        rule = Board.stringToRule(self.rules[1].rulestring),
+        option = {
+            crossoverRule = false,
+            crossoverColor = true,
+            crossoverRate = 0.00001,
+            mutationRate = 0.000001,
+            mutation = false,
+            aging = false,
+            agingColor = true,
+            agingDeath = true,
+            lifespan = 100,
+            lifespanRandom = false,
+            lifeSaturation = 0.75,
+        },
+        pause = false
+    }
+    self.baseRuleString = Board.ruleToString(self.board.rule)
+
+    -- セル設置時の設定
+    self.rule = Board.deepcopy(self.board.rule)
+    self.rulestring = Board.ruleToString(self.rule)
+    self.color = Board.deepcopy(self.board.colors.live)
+    self.randomColor = true
+    self.randomRule = false
+
+    -- ボードのランダム設定
+    self.board:resetRandomizeCells(self.randomColor, self.randomRule)
+    self.board:renderAllCells()
+
+    -- 移動モード
+    self.move = false
+    self.moveOrigin = { x = 0, y = 0 }
+    self.offsetOrigin = { x = 0, y = 0 }
+
+    -- ＵＩ
+    self.focusUI = false
+    self.editColor = nil
+    self.beforeColor = nil
+    self.windows = {
+        control = true,
+        rule = true,
+    }
 
     self:resetTitle()
 end
@@ -585,42 +585,6 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == '`' then
         self.board:resetRandomizeCells(true, true)
         self.board:renderAllCells()
-        self:resetTitle()
-    elseif key == '1' then
-        self.board.rule = Board.rules.life
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 0, 1, 1)
-        self:resetTitle()
-    elseif key == '2' then
-        self.board.rule = Board.rules.highLife
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 1, 1, 1)
-        self:resetTitle()
-    elseif key == '3' then
-        self.board.rule = Board.rules.mazectric
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 2, 1, 1)
-        self:resetTitle()
-    elseif key == '4' then
-        self.board.rule = Board.rules.replicator
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 3, 1, 1)
-        self:resetTitle()
-    elseif key == '5' then
-        self.board.rule = Board.rules.seeds
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 4, 1, 1)
-        self:resetTitle()
-    elseif key == '6' then
-        self.board.rule = Board.rules.bacteria
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 5, 1, 1)
-        self:resetTitle()
-    elseif key == '7' then
-        self.board.rule = Board.rules._2x2
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 6, 1, 1)
-        self:resetTitle()
-    elseif key == '8' then
-        self.board.rule = Board.rules.diamoeba
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 7, 1, 1)
-        self:resetTitle()
-    elseif key == '9' then
-        self.board.rule = Board.rules.lifeWithoutDeath
-        self.board.colors.live = Board.newHSVColor(1 / 9 * 8, 1, 1)
         self:resetTitle()
     elseif key == '0' then
         self.board.rule = Board.newRule(true)

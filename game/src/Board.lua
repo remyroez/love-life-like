@@ -233,36 +233,6 @@ Board.static.mooreNeighborhood = {
     {  1,  1 },
 }
 
--- ルール
-Board.static.rules = {
-    -- Conway's Game of Life
-    life = Board.static.stringToRule 'B3/S23',
-    -- HighLife
-    highLife = Board.static.stringToRule 'B36/S23',
-    -- Maze
-    maze = Board.static.stringToRule 'B3/S12345',
-    -- Mazectric
-    mazectric = Board.static.stringToRule 'B3/S1234',
-    -- Replicator
-    replicator = Board.static.stringToRule 'B1357/S1357',
-    -- Seeds
-    seeds = Board.static.stringToRule 'B2/S',
-    -- Life without death
-    lifeWithoutDeath = Board.static.stringToRule 'B3/S012345678',
-    -- Bugs
-    bugs = Board.static.stringToRule 'B3567/S15678',
-    -- 2x2
-    _2x2 = Board.static.stringToRule 'B36/S125',
-    -- Stains
-    stains = Board.static.stringToRule 'B3678/S235678',
-    -- Day & Night
-    dayAndNight = Board.static.stringToRule 'B3678/S34678',
-    -- Bacteria
-    bacteria = Board.static.stringToRule 'B34/S456',
-    -- Diamoeba
-    diamoeba = Board.static.stringToRule 'B35678/S5678',
-}
-
 -- 初期化
 function Board:initialize(args)
     args = type(args) == 'table' and args or {}
@@ -284,7 +254,7 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or Board.rules.life
+    self.rule = args.rule or Board.stringToRule 'B3/S23'
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
