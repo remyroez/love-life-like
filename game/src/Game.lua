@@ -64,6 +64,26 @@ local function checkbox(t, name, label)
     return changed
 end
 
+-- 入力欄
+local function input(t, name, label)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+	local ww, wh = Slab.GetWindowActiveSize()
+    local h = Slab.GetStyle().Font:getHeight()
+    if Slab.Input(name, { Text = tostring(t[name]), ReturnOnText = false, W = ww, H = h }) then
+        t[name] = Slab.GetInputText()
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
 -- 入力欄（数字）
 local function inputNumber(t, name, label, min, max)
     local changed = false
@@ -259,7 +279,7 @@ function Game:load(...)
     self.baseRuleString = Board.ruleToString(self.board.rule)
 
     -- ボード保存関連
-    self.filename = nil
+    self.filename = ''
     self.fileList = nil
     self.selectedFile = nil
     self.newBoardArgsTemplate = {
@@ -343,18 +363,16 @@ function Game:updateDebug(dt, ...)
                     Slab.OpenDialog('Open')
                 end
                 if Slab.MenuItem("Save") then
-                    if self.filename then
+                    if #self.filename > 0 then
                     else
                         self.board.pause = true
                         self.fileList = nil
-                        self.selectedFile = nil
                         Slab.OpenDialog('Save')
                     end
                 end
                 if Slab.MenuItem("Save As") then
                     self.board.pause = true
                     self.fileList = nil
-                    self.selectedFile = nil
                     Slab.OpenDialog('Save')
                 end
             end
@@ -465,26 +483,23 @@ function Game:resetBoard()
         pause = true
     }
     self.baseRuleString = Board.ruleToString(self.board.rule)
-    self.filename = nil
+    self.filename = ''
 end
 
 -- 開くダイアログ
 function Game:openDialog()
     if Slab.BeginDialog('Open', { Title = 'Open Board' }) then
-        spacer(200)
+        spacer(300)
 
-        -- ファイル一覧
+        -- ファイル一覧リストボックス
         Slab.BeginListBox('OpenList')
         do
+            -- ファイル一覧の更新
             if self.fileList == nil then
-                self.fileList = {}
-                local items = love.filesystem.getDirectoryItems(love.filesystem.getSaveDirectory() .. '/board')
-                for i, filename in ipairs(items) do
-                    if love.filesystem.getInfo(filename, 'file') then
-                        table.insert(self.fileList, filename)
-                    end
-                end
+                self:refreshFileList()
             end
+
+            -- ファイル一覧リストボックスアイテム
             for i, file in ipairs(self.fileList) do
                 Slab.BeginListBoxItem('OpenItem_' .. i, { Selected = self.selectedFile == file })
                 Slab.Text(file)
@@ -496,10 +511,15 @@ function Game:openDialog()
         end
         Slab.EndListBox()
 
+        Slab.Separator()
+
+        -- 開くボタン
         if Slab.Button('Open', { AlignRight = true, Disabled = self.selectedFile == nil }) then
             --self:resetBoard()
             Slab.CloseDialog()
         end
+
+        -- キャンセルボタン
         Slab.SameLine()
         if Slab.Button('Cancel', { AlignRight = true }) then
             Slab.CloseDialog()
@@ -511,9 +531,63 @@ end
 
 -- 保存ダイアログ
 function Game:saveDialog()
-    if Slab.BeginDialog('Save', { Title = 'Save Board' }) then
-        spacer(200)
+    if Slab.BeginDialog('Save', { Title = 'Save Board', Columns = 2 }) then
+        spacer(300)
+
+        -- ファイル一覧リストボックス
+        Slab.BeginListBox('SaveList')
+        do
+            -- ファイル一覧の更新
+            if self.fileList == nil then
+                self:refreshFileList()
+            end
+
+            -- ファイル一覧リストボックスアイテム
+            for i, file in ipairs(self.fileList) do
+                Slab.BeginListBoxItem('SaveItem_' .. i, { Selected = self.filename == file })
+                Slab.Text(file)
+                if Slab.IsListBoxItemClicked() then
+                    self.filename = file
+                end
+                Slab.EndListBoxItem()
+            end
+        end
+        Slab.EndListBox()
+
+        Slab.Separator()
+
+        -- ファイル名
+        input(self, 'filename', 'File Name')
+
+        Slab.Separator()
+
+        -- 保存ボタン
+        if Slab.Button('Save', { AlignRight = true, Disabled = #self.filename == 0 }) then
+            --self:resetBoard()
+            Slab.CloseDialog()
+        end
+
+        -- キャンセルボタン
+        Slab.SameLine()
+        if Slab.Button('Cancel', { AlignRight = true }) then
+            self.filename = ''
+            Slab.CloseDialog()
+        end
+
         Slab.EndDialog()
+    end
+end
+
+-- ファイルリストの更新
+function Game:refreshFileList()
+    if self.fileList == nil then
+        self.fileList = {}
+        local items = love.filesystem.getDirectoryItems(love.filesystem.getSaveDirectory() .. '/board')
+        for i, filename in ipairs(items) do
+            if love.filesystem.getInfo(filename, 'file') then
+                table.insert(self.fileList, filename)
+            end
+        end
     end
 end
 
