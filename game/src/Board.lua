@@ -953,12 +953,16 @@ function Board:step()
                     end
                 elseif cell.rule.count and cell.rule.count > 2 then
                     -- 死に始め
-                    cell.count = cell.rule.count - 1
-                    cell.color.hsv[3] = (cell.count - 1) / (cell.rule.count - 1)
-                    self:renderPixel(x, y, self:getCellColor(cell))
+                    local nextCell = {
+                        rule = cell.rule,
+                        color = deepcopy(cell.color),
+                        count = cell.rule.count - 1,
+                    }
+                    nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                    self:renderPixel(x, y, self:getCellColor(nextCell))
 
                     -- 次世代へ
-                    self:entryNextGeneration(x, y, cell, nextGenerations)
+                    self:entryNextGeneration(x, y, nextCell, nextGenerations)
                 else
                     -- 死ぬ
                     table.insert(deaths, x)
@@ -972,12 +976,16 @@ function Board:step()
 
             elseif state == 'dying' then
                 -- 死んでいく
-                cell.count = cell.count - 1
-                cell.color.hsv[3] = (cell.count - 1) / (cell.rule.count - 1)
-                self:renderPixel(x, y, self:getCellColor(cell))
+                local nextCell = {
+                    rule = cell.rule,
+                    color = deepcopy(cell.color),
+                    count = cell.count - 1,
+                }
+                nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                self:renderPixel(x, y, self:getCellColor(nextCell))
 
                 -- 次世代へ
-                self:entryNextGeneration(x, y, cell, nextGenerations)
+                self:entryNextGeneration(x, y, nextCell, nextGenerations)
             end
         end
     end
