@@ -126,17 +126,102 @@ Board.static.hsv2rgb = hsv2rgb
 Board.static.rgb2hsv = rgb2hsv
 Board.static.deepcopy = deepcopy
 
+-- ルール一覧
+Board.static.rules = {
+    'Life',
+    'Generations',
+}
+
 -- 新ルール
 Board.static.newRule = function(randomize)
     return randomize and {
+        type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
         birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
         survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
     } or {
+        type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
         birth   = { false, false, false, false, false, false, false, false, false, },
         survive = { false, false, false, false, false, false, false, false, false, }
     }
+end
+
+-- 新ルール
+Board.static.newLifeRule = function(randomize)
+    return randomize and {
+        type = 'Life',
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
+        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
+    } or {
+        type = 'Life',
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false, false, false, false, false, false, false, },
+        survive = { false, false, false, false, false, false, false, false, false, }
+    }
+end
+
+-- 新ルール
+Board.static.newGenerationsRule = function(count, randomize)
+    return randomize and {
+        type = 'Generations',
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
+        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
+        count = count or 2,
+    } or {
+        type = 'Generations',
+        --              0,     1,     2,     3,     4,     5,     6,     7      8
+        birth   = { false, false, false, false, false, false, false, false, false, },
+        survive = { false, false, false, false, false, false, false, false, false, },
+        count = count or 2,
+    }
+end
+
+-- 他のルールから Life ルールに変換
+function Board.static.convertRule(ruleType, rule)
+    if ruleType == 'Life' then
+        return Board.convertLifeRule(rule)
+    elseif ruleType == 'Generations' then
+        return Board.convertGenerationsRule(rule)
+    end
+    return rule
+end
+
+-- 他のルールから Life ルールに変換
+function Board.static.convertLifeRule(rule)
+    local newRule
+    if rule.type == 'Life' then
+        -- Life ルール
+        newRule = rule
+    elseif rule.type == 'Generations' then
+        -- Generations ルール
+        newRule = {
+            type = 'Life',
+            birth = deepcopy(rule.birth),
+            survive = deepcopy(rule.survive),
+        }
+    end
+    return newRule
+end
+
+-- 他のルールから Generations ルールに変換
+function Board.static.convertGenerationsRule(rule)
+    local newRule
+    if rule.type == 'Life' then
+        -- Life ルール
+        newRule = {
+            type = 'Generations',
+            birth = deepcopy(rule.birth),
+            survive = deepcopy(rule.survive),
+            count = 2,
+        }
+    elseif rule.type == 'Generations' then
+        -- Generations ルール
+        newRule = rule
+    end
+    return newRule
 end
 
 -- 新HSVカラー
@@ -151,6 +236,16 @@ end
 
 -- ルールを文字列化
 Board.static.ruleToString = function(rule)
+    if rule.type == 'Life' then
+        return Board.lifeRuleToString(rule)
+    elseif rule.type == 'Generations' then
+        return Board.generationsRuleToString(rule)
+    end
+    return ''
+end
+
+-- ルールを文字列化
+Board.static.lifeRuleToString = function(rule)
     local buffer = 'B'
 
     for i, bool in ipairs(rule.birth) do
@@ -171,7 +266,39 @@ Board.static.ruleToString = function(rule)
 end
 
 -- ルールを文字列化
-Board.static.stringToRule = function(str)
+Board.static.generationsRuleToString = function(rule)
+    local buffer = 'B'
+
+    for i, bool in ipairs(rule.birth) do
+        if bool then
+            buffer = buffer .. tostring(i - 1)
+        end
+    end
+
+    buffer = buffer .. '/S'
+
+    for i, bool in ipairs(rule.survive) do
+        if bool then
+            buffer = buffer .. tostring(i - 1)
+        end
+    end
+
+    buffer = buffer .. '/C' .. rule.count
+
+    return buffer
+end
+
+-- ルールを文字列化
+Board.static.stringToRule = function(ruleType, str)
+    if ruleType == 'Life' then
+        return Board.stringToLifeRule(str)
+    elseif ruleType == 'Generations' then
+        return Board.stringToGenerationsRule(str)
+    end
+end
+
+-- Life ルールを文字列化
+Board.static.stringToLifeRule = function(str)
     str = str or 'B/S'
 
     local rule = Board.newRule()
@@ -186,6 +313,45 @@ Board.static.stringToRule = function(str)
         else
             local n = tonumber(c)
             if n then
+                rule[target][n + 1] = true
+            end
+        end
+    end
+
+    return rule
+end
+
+-- Generations ルールを文字列化
+Board.static.stringToGenerationsRule = function(str)
+    str = str or 'B/S/C'
+
+    local rule = Board.newGenerationsRule(0)
+
+    local target = 'birth'
+    for i = 1, string.len(str) do
+        local c = string.sub(str, i, i)
+        if c == 'B' then
+            target = 'birth'
+        elseif c == 'S' then
+            target = 'survive'
+        elseif c == 'C' then
+            target = 'count'
+        elseif c == '/' then
+            if target == 'birth' then
+                target = 'survive'
+            elseif target == 'survive' then
+                target = 'count'
+            elseif target == 'count' then
+            else
+            end
+        else
+            local n = tonumber(c)
+            if not n then
+                -- 数字じゃない
+            elseif target == 'count' then
+                -- カウント時
+                rule.count = rule.count * 10 + n
+            else
                 rule[target][n + 1] = true
             end
         end
@@ -254,29 +420,29 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or Board.stringToRule 'B3/S23'
+    self.rule = args.rule or Board.stringToLifeRule 'B3/S23'
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
     -- 遺伝オプション
-    args.option = args.option or {}
-    self.option = args.option
-    self.option.crossover = args.option.crossover ~= nil and args.option.crossover or false
-    self.option.crossoverRule = args.option.crossoverRule ~= nil and args.option.crossoverRule or false
-    self.option.crossoverColor = args.option.crossoverColor ~= nil and args.option.crossoverColor or false
-    self.option.crossoverRate = args.option.mutationRate or 0.001
-    self.option.mutation = args.option.mutation ~= nil and args.option.mutation or false
-    self.option.mutationRule = args.option.mutationRule ~= nil and args.option.mutationRule or false
-    self.option.mutationColor = args.option.mutationColor ~= nil and args.option.mutationColor or false
-    self.option.mutationRate = args.option.mutationRate or 0.000001
-    self.option.aging = args.option.aging ~= nil and args.option.aging or false
-    self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
-    self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
-    self.option.lifespan = args.option.lifespan or 1000
-    self.option.lifespanRandom = args.option.lifespanRandom ~= nil and args.option.lifespanRandom or false
-    self.option.lifeSaturation = args.option.lifeSaturation or 0.75
+    self.option = args.option or {}
+    self.option.crossover = self.option.crossover ~= nil and self.option.crossover or false
+    self.option.crossoverRule = self.option.crossoverRule ~= nil and self.option.crossoverRule or false
+    self.option.crossoverColor = self.option.crossoverColor ~= nil and self.option.crossoverColor or false
+    self.option.crossoverRate = self.option.mutationRate or 0.001
+    self.option.mutation = self.option.mutation ~= nil and self.option.mutation or false
+    self.option.mutationRule = self.option.mutationRule ~= nil and self.option.mutationRule or false
+    self.option.mutationColor = self.option.mutationColor ~= nil and self.option.mutationColor or false
+    self.option.mutationRate = self.option.mutationRate or 0.000001
+    self.option.mutationRules = self.option.mutationRules or { Life = true, Generations = false }
+    self.option.aging = self.option.aging ~= nil and self.option.aging or false
+    self.option.agingColor = self.option.agingColor ~= nil and self.option.agingColor or false
+    self.option.agingDeath = self.option.agingDeath ~= nil and self.option.agingDeath or false
+    self.option.lifespan = self.option.lifespan or 1000
+    self.option.lifespanRandom = self.option.lifespanRandom ~= nil and self.option.lifespanRandom or false
+    self.option.lifeSaturation = self.option.lifeSaturation or 0.75
 
     -- その他
     self.minLifeSaturation = 1 - self.option.lifeSaturation
@@ -443,9 +609,19 @@ function Board:crossover(parents)
             -- それぞれのルールのリストアップ
             local birthRules = {}
             local surviveRules = {}
+            local counts = {}
+            local countMin, countMax = 10000, 2
             for _, parent in ipairs(parents) do
                 table.insert(birthRules, parent.rule.birth)
                 table.insert(surviveRules, parent.rule.survive)
+                if parent.rule.count then
+                    table.insert(counts, parent.rule.count)
+                    if parent.rule.count < countMin then
+                        countMin = parent.rule.count
+                    elseif parent.rule.count > countMax then
+                        countMax = parent.rule.count
+                    end
+                end
             end
 
             -- 誕生ルールの交差
@@ -483,12 +659,19 @@ function Board:crossover(parents)
                     mutated = true
                 end
             end
+
+            -- 死亡カウントの交差
+            if #counts > 0 then
+                rule = Board.convertGenerationsRule(rule)
+                rule.count = random(countMin, countMax)
+                --rule.count = counts[random(#counts)]
+            end
         end
     else
         -- クローン
         if mutation and self.option.mutationRule then
             -- 突然変異
-            rule = Board.newRule(true)
+            rule = randomBool() and Board.newRule(true) or Board.newGenerationsRule(random(10), true)
         else
             -- コピー
             rule = deepcopy(randomParent.rule)
@@ -656,6 +839,8 @@ function Board:checkCell(x, y, target, candidates)
     if cell == nil then
         -- 見つからなければ次世代候補にする
         self:entryCandidates(x, y, target, candidates)
+    elseif cell.count then
+        -- 死んでいくセルはカウントしない
     else
         return cell
     end
@@ -700,6 +885,17 @@ function Board:checkAge(cell)
     end
 end
 
+-- セルが死んでいくかどうか
+function Board:checkDyingState(cell)
+    if not cell.count then
+        return nil
+    elseif cell.count <= 2 then
+        return 'die'
+    else
+        return 'dying'
+    end
+end
+
 -- 色の取得
 function Board:getColor(color)
     if color[1] then
@@ -730,30 +926,58 @@ function Board:step()
     -- 生存しているセルをチェック
     for x, column in pairs(self.cells) do
         for y, cell in pairs(column) do
-            local count = 0
-            for _, pos in ipairs(Board.mooreNeighborhood) do
-                if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
-                    count = count + 1
-                end
-            end
-            if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
-                -- 生き残る
-                cell.age = cell.age + 1
-
-                -- 次世代へ
-                self:entryNextGeneration(x, y, cell, nextGenerations)
-
-                -- 老化
-                if self.option.aging and self.option.agingColor then
-                    if cell.color.hsv[2] > self.minLifeSaturation then
-                        cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
+            local state = self:checkDyingState(cell)
+            if not state then
+                -- まだ死なない
+                local count = 0
+                for _, pos in ipairs(Board.mooreNeighborhood) do
+                    if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
+                        count = count + 1
                     end
-                    self:renderPixel(x, y, self:getCellColor(cell))
                 end
-            else
+
+                -- 生死判定
+                if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
+                    -- 生き残る
+                    cell.age = cell.age + 1
+
+                    -- 次世代へ
+                    self:entryNextGeneration(x, y, cell, nextGenerations)
+
+                    -- 老化
+                    if self.option.aging and self.option.agingColor then
+                        if cell.color.hsv[2] > self.minLifeSaturation then
+                            cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
+                        end
+                        self:renderPixel(x, y, self:getCellColor(cell))
+                    end
+                elseif cell.rule.count and cell.rule.count > 2 then
+                    -- 死に始め
+                    cell.count = cell.rule.count - 1
+                    cell.color.hsv[3] = (cell.count - 1) / (cell.rule.count - 1)
+                    self:renderPixel(x, y, self:getCellColor(cell))
+
+                    -- 次世代へ
+                    self:entryNextGeneration(x, y, cell, nextGenerations)
+                else
+                    -- 死ぬ
+                    table.insert(deaths, x)
+                    table.insert(deaths, y)
+                end
+
+            elseif state == 'die' then
                 -- 死ぬ
                 table.insert(deaths, x)
                 table.insert(deaths, y)
+
+            elseif state == 'dying' then
+                -- 死んでいく
+                cell.count = cell.count - 1
+                cell.color.hsv[3] = (cell.count - 1) / (cell.rule.count - 1)
+                self:renderPixel(x, y, self:getCellColor(cell))
+
+                -- 次世代へ
+                self:entryNextGeneration(x, y, cell, nextGenerations)
             end
         end
     end
