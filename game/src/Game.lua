@@ -213,59 +213,83 @@ function Game:load(...)
     self.rules = {
         {
             title = 'Conway\'s Game of Life',
+            type = 'Life',
             rulestring = 'B3/S23'
         },
         {
             title = 'HighLife',
+            type = 'Life',
             rulestring = 'B36/S23'
         },
         {
             title = 'Maze',
+            type = 'Life',
             rulestring = 'B3/S12345'
         },
         {
             title = 'Mazectric',
+            type = 'Life',
             rulestring = 'B3/S1234'
         },
         {
             title = 'Replicator',
+            type = 'Life',
             rulestring = 'B1357/S1357'
         },
         {
             title = 'Seeds',
+            type = 'Life',
             rulestring = 'B2/S'
         },
         {
             title = 'Life without death',
+            type = 'Life',
             rulestring = 'B3/S012345678'
         },
         {
             title = 'Bugs',
+            type = 'Life',
             rulestring = 'B3567/S15678'
         },
         {
             title = '2x2',
+            type = 'Life',
             rulestring = 'B36/S125'
         },
         {
             title = 'Stains',
+            type = 'Life',
             rulestring = 'B3678/S235678'
         },
         {
             title = 'Day & Night',
+            type = 'Life',
             rulestring = 'B3678/S34678'
         },
         {
             title = 'Bacteria',
+            type = 'Life',
             rulestring = 'B34/S456'
         },
         {
             title = 'Diamoeba',
+            type = 'Life',
             rulestring = 'B35678/S5678'
         },
         {
             title = 'Wall',
+            type = 'Life',
             rulestring = 'B/S012345678'
+        },
+        {
+            title = 'Star Wars',
+            type = 'Generations',
+            rulestring = 'B2/S345/C4'
+        },
+        {
+            title = 'Brian\'s Brain',
+            type = 'Generations',
+            rulestring = 'B2/S/3'
         },
     }
     self.selectedRule = nil
@@ -664,21 +688,51 @@ function Game:controlWindow()
     if Slab.BeginComboBox('ControlRulePresets', { Selected = self.selectedRule or 'Rule Presets',  W = ww }) then
         for i, t in ipairs(self.rules) do
             if Slab.TextSelectable(t.title .. ' (' .. t.rulestring .. ')') then
-                self.rule = Board.stringToRule(t.rulestring)
+                self.rule = Board.stringToRule(t.type, t.rulestring)
                 self.rulestring = Board.ruleToString(self.rule)
                 self.selectedRule = t.title .. ' (' .. t.rulestring .. ')'
             end
         end
         Slab.EndComboBox()
     end
+
+    -- ルールタイプ
+    do
+        Slab.BeginColumn(1)
+        Slab.Text('Rule')
+        Slab.EndColumn()
+
+        Slab.BeginColumn(2)
+        local cw, ch = Slab.GetWindowActiveSize()
+        if Slab.BeginComboBox('RuleType', { Selected = self.rule.type,  W = cw }) then
+            for i, name in ipairs(Board.rules) do
+                if Slab.TextSelectable(name) then
+                    self.rule = Board.convertRule(name, self.rule)
+                    self.rulestring = Board.ruleToString(self.rule)
+                    self.selectedRule = nil
+                end
+            end
+            Slab.EndComboBox()
+        end
+        Slab.EndColumn()
+    end
+
     -- ルールチェックボックス
-    if checkboxesRule(self.rule) then
+    if self.rule.birth and self.rule.survive and checkboxesRule(self.rule) then
         self.rulestring = Board.ruleToString(self.rule)
         self.selectedRule = nil
     end
+
+    -- ルール カウント
+    if self.rule.count and inputNumber(self.rule, 'count', 'Count', 2) then
+        self.rule.count = math.floor(self.rule.count)
+        self.rulestring = Board.ruleToString(self.rule)
+        self.selectedRule = nil
+    end
+
     -- ルール文字列
     if inputRulestrings(self.rulestring) then
-        self.rule = Board.stringToRule(Slab.GetInputText())
+        self.rule = Board.stringToRule(self.rule.type, Slab.GetInputText())
         self.rulestring = Board.ruleToString(self.rule)
         self.selectedRule = nil
     end
