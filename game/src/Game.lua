@@ -260,6 +260,8 @@ function Game:load(...)
 
     -- ボード保存関連
     self.filename = nil
+    self.fileList = nil
+    self.selectedFile = nil
     self.newBoardArgsTemplate = {
         width = self.board.width,
         height = self.board.height,
@@ -336,17 +338,23 @@ function Game:updateDebug(dt, ...)
             if self.savable then
                 if Slab.MenuItem("Open") then
                     self.board.pause = true
+                    self.fileList = nil
+                    self.selectedFile = nil
                     Slab.OpenDialog('Open')
                 end
                 if Slab.MenuItem("Save") then
                     if self.filename then
                     else
                         self.board.pause = true
+                        self.fileList = nil
+                        self.selectedFile = nil
                         Slab.OpenDialog('Save')
                     end
                 end
                 if Slab.MenuItem("Save As") then
                     self.board.pause = true
+                    self.fileList = nil
+                    self.selectedFile = nil
                     Slab.OpenDialog('Save')
                 end
             end
@@ -462,10 +470,51 @@ end
 
 -- 開くダイアログ
 function Game:openDialog()
+    if Slab.BeginDialog('Open', { Title = 'Open Board' }) then
+        spacer(200)
+
+        -- ファイル一覧
+        Slab.BeginListBox('OpenList')
+        do
+            if self.fileList == nil then
+                self.fileList = {}
+                local items = love.filesystem.getDirectoryItems(love.filesystem.getSaveDirectory() .. '/board')
+                for i, filename in ipairs(items) do
+                    if love.filesystem.getInfo(filename, 'file') then
+                        table.insert(self.fileList, filename)
+                    end
+                end
+            end
+            for i, file in ipairs(self.fileList) do
+                Slab.BeginListBoxItem('OpenItem_' .. i, { Selected = self.selectedFile == file })
+                Slab.Text(file)
+                if Slab.IsListBoxItemClicked() then
+                    self.selectedFile = file
+                end
+                Slab.EndListBoxItem()
+            end
+        end
+        Slab.EndListBox()
+
+        if Slab.Button('Open', { AlignRight = true, Disabled = self.selectedFile == nil }) then
+            --self:resetBoard()
+            Slab.CloseDialog()
+        end
+        Slab.SameLine()
+        if Slab.Button('Cancel', { AlignRight = true }) then
+            Slab.CloseDialog()
+        end
+
+        Slab.EndDialog()
+    end
 end
 
 -- 保存ダイアログ
 function Game:saveDialog()
+    if Slab.BeginDialog('Save', { Title = 'Save Board' }) then
+        spacer(200)
+        Slab.EndDialog()
+    end
 end
 
 -- 操作ウィンドウ
