@@ -284,6 +284,8 @@ function Board:initialize(args)
     self.interval = args.interval or 0
     self.wait = self.interval
     self.pause = args.pause ~= nil and args.pause or false
+
+    self:renderAllCells()
 end
 
 -- 更新
@@ -777,6 +779,16 @@ function Board:step()
     self.cells = nextGenerations
 
     self:refresh()
+end
+
+-- 保存用のダンプ
+function Board:dump()
+    return {
+        width = self.width,
+        height = self.height,
+        option = self.option,
+        cells = self.cells,
+    }
 end
 
 return Board

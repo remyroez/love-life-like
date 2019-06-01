@@ -2,6 +2,7 @@
 local class = require 'middleclass'
 local Slab = require 'Slab'
 local Window = require('Slab.Internal.UI.Window')
+local binser = require 'binser'
 
 -- クラス
 local Application = require 'Application'
@@ -288,6 +289,7 @@ function Game:load(...)
         option = Board.deepcopy(self.board.option),
     }
     self.newBoardArgs = nil
+    self.errorMessage = nil
 
     -- セル設置時の設定
     self.rule = Board.deepcopy(self.board.rule)
@@ -364,6 +366,12 @@ function Game:updateDebug(dt, ...)
                 end
                 if Slab.MenuItem("Save") then
                     if #self.filename > 0 then
+                        local success, message = self:saveBoard(self.filename)
+                        if success then
+                            Slab.CloseDialog()
+                        else
+                            self.errorMessage = message
+                        end
                     else
                         self.board.pause = true
                         self.fileList = nil
@@ -400,17 +408,26 @@ function Game:updateDebug(dt, ...)
         Slab.EndMainMenuBar()
     end
 
+    -- 各ダイアログ
     self:newDialog()
     self:openDialog()
     self:saveDialog()
 
+    -- 各ウィンドウ
     if self.windows.control then self:controlWindow() end
     if self.windows.rule then self:ruleWindow() end
 
-    -- カラーエディット
+    -- カラーエディットウィンドウ
     if self.editColor then
         if self:colorEditWindow() then
             self.board:renderAllCells()
+        end
+    end
+
+    -- エラーメッセージボックス
+    if self.errorMessage then
+        if Slab.MessageBox('Error', self.errorMessage) ~= '' then
+            self.errorMessage = nil
         end
     end
 
@@ -475,15 +492,16 @@ function Game:newDialog()
 end
 
 -- 開くダイアログ
-function Game:resetBoard()
+function Game:resetBoard(args, filename)
     self.board = Board {
-        width = self.newBoardArgs.width,
-        height = self.newBoardArgs.height,
-        option = self.newBoardArgs.option,
+        width  = args.width,
+        height = args.height,
+        cells  = args.cells,
+        option = args.option,
         pause = true
     }
     self.baseRuleString = Board.ruleToString(self.board.rule)
-    self.filename = ''
+    self.filename = filename or ''
 end
 
 -- 開くダイアログ
@@ -515,7 +533,7 @@ function Game:openDialog()
 
         -- 開くボタン
         if Slab.Button('Open', { AlignRight = true, Disabled = self.selectedFile == nil }) then
-            --self:resetBoard()
+            self:openBoard(self.selectedFile)
             Slab.CloseDialog()
         end
 
@@ -527,6 +545,13 @@ function Game:openDialog()
 
         Slab.EndDialog()
     end
+end
+
+-- ボードの保存
+function Game:openBoard(filename)
+    local data = love.filesystem.read('board/' .. filename)
+    local dump = binser.dn(data)
+    self:resetBoard(dump, filename)
 end
 
 -- 保存ダイアログ
@@ -563,8 +588,12 @@ function Game:saveDialog()
 
         -- 保存ボタン
         if Slab.Button('Save', { AlignRight = true, Disabled = #self.filename == 0 }) then
-            --self:resetBoard()
-            Slab.CloseDialog()
+            local success, message = self:saveBoard(self.filename)
+            if success then
+                Slab.CloseDialog()
+            else
+                self.errorMessage = message
+            end
         end
 
         -- キャンセルボタン
@@ -578,15 +607,19 @@ function Game:saveDialog()
     end
 end
 
+-- ボードの保存
+function Game:saveBoard(filename)
+    local data = binser.s(self.board:dump())
+    return love.filesystem.write('board/' .. filename, data)
+end
+
 -- ファイルリストの更新
 function Game:refreshFileList()
-    if self.fileList == nil then
-        self.fileList = {}
-        local items = love.filesystem.getDirectoryItems(love.filesystem.getSaveDirectory() .. '/board')
-        for i, filename in ipairs(items) do
-            if love.filesystem.getInfo(filename, 'file') then
-                table.insert(self.fileList, filename)
-            end
+    self.fileList = {}
+    local items = love.filesystem.getDirectoryItems('board')
+    for i, filename in ipairs(items) do
+        if love.filesystem.getInfo('board/' .. filename, 'file') then
+            table.insert(self.fileList, filename)
         end
     end
 end
