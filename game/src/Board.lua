@@ -56,9 +56,9 @@ local function rgb2bit(r, g, b, a)
 
     return bit.bor(
         bit.lshift(math.floor(a * 255), 24),
-        bit.lshift(math.floor(r * 255), 16),
+        bit.lshift(math.floor(b * 255), 16),
         bit.lshift(math.floor(g * 255), 8),
-        math.floor(b * 255)
+        math.floor(r * 255)
     )
 end
 
@@ -118,9 +118,13 @@ end
 local random = love.math.random
 
 -- ランダム真偽値
-local function randomBool()
-    return random(2) == 1
+local function randomBool(n)
+    return random(n or 2) == 1
 end
+
+Board.static.hsv2rgb = hsv2rgb
+Board.static.rgb2hsv = rgb2hsv
+Board.static.deepcopy = deepcopy
 
 -- 新ルール
 Board.static.newRule = function(randomize)
@@ -229,44 +233,14 @@ Board.static.mooreNeighborhood = {
     {  1,  1 },
 }
 
--- ルール
-Board.static.rules = {
-    -- Conway's Game of Life
-    life = Board.static.stringToRule 'B3/S23',
-    -- HighLife
-    highLife = Board.static.stringToRule 'B36/S23',
-    -- Maze
-    maze = Board.static.stringToRule 'B3/S12345',
-    -- Mazectric
-    mazectric = Board.static.stringToRule 'B3/S1234',
-    -- Replicator
-    replicator = Board.static.stringToRule 'B1357/S1357',
-    -- Seeds
-    seeds = Board.static.stringToRule 'B2/S',
-    -- Life without death
-    lifeWithoutDeath = Board.static.stringToRule 'B3/S012345678',
-    -- Bugs
-    bugs = Board.static.stringToRule 'B3567/S15678',
-    -- 2x2
-    _2x2 = Board.static.stringToRule 'B36/S125',
-    -- Stains
-    stains = Board.static.stringToRule 'B3678/S235678',
-    -- Day & Night
-    dayAndNight = Board.static.stringToRule 'B3678/S34678',
-    -- Bacteria
-    bacteria = Board.static.stringToRule 'B34/S456',
-    -- Diamoeba
-    diamoeba = Board.static.stringToRule 'B35678/S5678',
-}
-
 -- 初期化
 function Board:initialize(args)
     args = type(args) == 'table' and args or {}
 
     -- カラー
     self.colors = args.colors or {
-        death = { 0, 0, 0 },
-        live = { 1, 1, 1 },
+        live = Board.newHSVColor(0, 1, 1),
+        death = Board.newHSVColor(0, 0, 0)
     }
 
     -- フレームバッファ
@@ -280,19 +254,23 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or Board.rules.life
+    self.rule = args.rule or Board.stringToRule 'B3/S23'
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
     -- 遺伝オプション
-    self.option = args.option or {}
-    self.option.crossoverRule = args.option.crossoverRule == nil and true or args.option.crossoverRule
-    self.option.crossoverColor = args.option.crossoverColor == nil and true or args.option.crossoverColor
+    args.option = args.option or {}
+    self.option = args.option
+    self.option.crossover = args.option.crossover ~= nil and args.option.crossover or false
+    self.option.crossoverRule = args.option.crossoverRule ~= nil and args.option.crossoverRule or false
+    self.option.crossoverColor = args.option.crossoverColor ~= nil and args.option.crossoverColor or false
     self.option.crossoverRate = args.option.mutationRate or 0.001
-    self.option.mutationRate = args.option.mutationRate or 0.001
-    self.option.mutation = args.option.mutation == nil and true or args.option.mutation
+    self.option.mutation = args.option.mutation ~= nil and args.option.mutation or false
+    self.option.mutationRule = args.option.mutationRule ~= nil and args.option.mutationRule or false
+    self.option.mutationColor = args.option.mutationColor ~= nil and args.option.mutationColor or false
+    self.option.mutationRate = args.option.mutationRate or 0.000001
     self.option.aging = args.option.aging ~= nil and args.option.aging or false
     self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
     self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
@@ -306,6 +284,8 @@ function Board:initialize(args)
     self.interval = args.interval or 0
     self.wait = self.interval
     self.pause = args.pause ~= nil and args.pause or false
+
+    self:renderAllCells()
 end
 
 -- 更新
@@ -347,10 +327,10 @@ function Board:togglePause()
     self.pause = not self.pause
 end
 
--- キャンバスへ描画
-function Board:renderTo(fn)
-    --self.canvas:renderTo(...)
-    fn(self)
+-- 寿命関連の設定を更新
+function Board:updateLifespanOption()
+    self.minLifeSaturation = 1 - self.option.lifeSaturation
+    self.lifeSaturationUnit = 1 / self.option.lifespan
 end
 
 -- フレームバッファ更新
@@ -433,8 +413,8 @@ function Board:newCell(args)
 
     -- 新規
     return {
-        rule = rule or args.rule or self.rule,
-        color = color or args.color or deepcopy(self.colors.live),
+        rule = rule or deepcopy(args.rule) or deepcopy(self.rule),
+        color = color or deepcopy(args.color) or deepcopy(self.colors.live),
         age = 0,
     }
 end
@@ -451,7 +431,7 @@ function Board:crossover(parents)
 
     -- ルール
     local rule
-    if self.option.crossoverRule then
+    if self.option.crossover and self.option.crossoverRule then
         -- 交差
 
         -- 新ルール
@@ -496,7 +476,7 @@ function Board:crossover(parents)
                 end
 
                 -- 突然変異
-                if #sameIndice > 0 and mutation and not birthOrSurvive then
+                if #sameIndice > 0 and mutation and self.option.mutationRule and not birthOrSurvive then
                     -- 全ての親で同じフラグのどれかを反転
                     local mutationIndex = sameIndice[random(#sameIndice)]
                     rule.survive[mutationIndex] = not rule.survive[mutationIndex]
@@ -506,20 +486,20 @@ function Board:crossover(parents)
         end
     else
         -- クローン
-        if mutation then
+        if mutation and self.option.mutationRule then
             -- 突然変異
             rule = Board.newRule(true)
         else
-            -- 交差
+            -- コピー
             rule = deepcopy(randomParent.rule)
         end
     end
 
     -- 色
     local color
-    if self.option.crossoverColor then
+    if self.option.crossover and self.option.crossoverColor then
         -- 交差
-        if mutation then
+        if mutation and self.option.mutationColor then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
         elseif numParents == 1 then
@@ -529,7 +509,10 @@ function Board:crossover(parents)
             -- 交差
             local colors = {}
             for _, parent in ipairs(parents) do
-                table.insert(colors, parent.color.hsv)
+                local hsv = deepcopy(parent.color.hsv)
+                hsv[2] = 1
+                hsv[3] = 1
+                table.insert(colors, hsv)
             end
             color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
         end
@@ -537,11 +520,11 @@ function Board:crossover(parents)
         color.hsv[3] = 1
     else
         -- クローン
-        if mutation then
+        if mutation and self.option.mutationColor then
             -- 突然変異
             color = Board.newHSVColor(random(), 1, 1)
         else
-            -- 交差
+            -- コピー
             color = deepcopy(randomParent.color)
         end
         color.hsv[2] = 1
@@ -559,6 +542,26 @@ end
 -- セルをリセット
 function Board:resetCells(cells)
     self.cells = cells or {}
+end
+
+-- セルを全て配置
+function Board:resetAllCells(rule, color, div)
+    self.cells = {}
+
+    for x = 1, self.width do
+        for y = 1, self.height do
+            if randomBool(div) then
+                self:setCell(
+                    x,
+                    y,
+                    self:newCell{
+                        rule = (type(rule) == 'function') and rule() or rule,
+                        color = (type(color) == 'function') and color() or color
+                    }
+                )
+            end
+        end
+    end
 end
 
 -- セルをランダム配置
@@ -613,6 +616,7 @@ end
 function Board:renderAllCells(refresh)
     refresh = refresh == nil and true or refresh
 
+    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
     self.fb.fill()
 
     for x, column in pairs(self.cells) do
@@ -766,15 +770,25 @@ function Board:step()
         end
     end
 
-    -- 死者と誕生者を描画
+    -- 死者を描画
     for i = 1, #deaths, 2 do
-        self:renderPixel(deaths[i], deaths[i + 1])
+        self:renderPixel(deaths[i], deaths[i + 1], self:getColor(self.colors.death))
     end
 
     -- 次の世代へ差し替える
     self.cells = nextGenerations
 
     self:refresh()
+end
+
+-- 保存用のダンプ
+function Board:dump()
+    return {
+        width = self.width,
+        height = self.height,
+        option = self.option,
+        cells = self.cells,
+    }
 end
 
 return Board
