@@ -376,13 +376,13 @@ function Game:updateDebug(dt, ...)
     if Slab.BeginMainMenuBar() then
         -- ファイル
         if Slab.BeginMenu("File") then
-            if Slab.MenuItem("New") then
+            if Slab.MenuItem("New...") then
                 self.board.pause = true
                 self.newBoardArgs = Board.deepcopy(self.newBoardArgsTemplate)
                 Slab.OpenDialog('New')
             end
             if self.savable then
-                if Slab.MenuItem("Open") then
+                if Slab.MenuItem("Open...") then
                     self.board.pause = true
                     self.fileList = nil
                     self.selectedFile = nil
@@ -402,11 +402,17 @@ function Game:updateDebug(dt, ...)
                         Slab.OpenDialog('Save')
                     end
                 end
-                if Slab.MenuItem("Save As") then
+                if Slab.MenuItem("Save As...") then
                     self.board.pause = true
                     self.fileList = nil
                     Slab.OpenDialog('Save')
                 end
+            end
+
+            Slab.Separator()
+
+            if Slab.MenuItem("Open save directory") then
+                love.system.openURL('file://' .. love.filesystem.getSaveDirectory())
             end
 
             Slab.Separator()
