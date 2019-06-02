@@ -2,129 +2,14 @@
 local class = require 'middleclass'
 local fblove = require 'fblove_strip'
 
+-- ユーティリティ
+local util = require 'util'
+
 -- アプリケーション
 local Board = class 'Board'
 
--- HSV カラーを RGB カラーに変換
-local function hsv2rgb(h, s, v)
-    if s <= 0 then return v, v, v end
-    h, s, v = (h or 0) * 6, (s or 1), (v or 1)
-    local c = v * s
-    local x = (1 - math.abs((h % 2) - 1)) * c
-    local m, r, g, b = (v - c), 0, 0, 0
-    if h < 1     then r, g, b = c, x, 0
-    elseif h < 2 then r, g, b = x, c, 0
-    elseif h < 3 then r, g, b = 0, c, x
-    elseif h < 4 then r, g, b = 0, x, c
-    elseif h < 5 then r, g, b = x, 0, c
-    else              r, g, b = c, 0, x
-    end
-    return (r + m), (g + m), (b + m)
-end
-
--- RGB カラーを HSV カラーに変換
-local function rgb2hsv(r, g, b)
-    r, g, b = r or 0, g or 0, b or 0
-    local max, min = math.max(r, g, b), math.min(r, g, b)
-    local h, s, v
-    v = max
-
-    local d = max - min
-    if max == 0 then s = 0 else s = d / max end
-
-    if max == min then
-      h = 0 -- achromatic
-    else
-      if max == r then
-      h = (g - b) / d
-      if g < b then h = h + 6 end
-      elseif max == g then h = (b - r) / d + 2
-      elseif max == b then h = (r - g) / d + 4
-      end
-      h = h / 6
-    end
-
-    return h, s, v
-end
-
--- RGB カラーをビット変換
-local function rgb2bit(r, g, b, a)
-    r = r or 1
-    g = g or 1
-    b = b or 1
-    a = a or 1
-
-    return bit.bor(
-        bit.lshift(math.floor(a * 255), 24),
-        bit.lshift(math.floor(b * 255), 16),
-        bit.lshift(math.floor(g * 255), 8),
-        math.floor(r * 255)
-    )
-end
-
--- 任意の数の RGB カラーをブレンド
-local function blendRGB(...)
-    local rgb = { 0, 0, 0 }
-
-    local n = select("#", ...)
-    for i = 1, n do
-        local color = select(i, ...)
-        for j, elm in ipairs(rgb) do
-            rgb[j] = rgb[j] + color[j]
-        end
-    end
-
-    rgb[1] = math.min(rgb[1] / n, 1)
-    rgb[2] = math.min(rgb[2] / n, 1)
-    rgb[3] = math.min(rgb[3] / n, 1)
-
-    return rgb
-end
-
--- 任意の数の HSV カラーをブレンド
-local function blendHSV(...)
-    local rgbs = {}
-
-    local n = select("#", ...)
-    for i = 1, n do
-        local color = select(i, ...)
-        table.insert(rgbs, { hsv2rgb(color[1], color[2], color[3]) })
-    end
-
-    local rgb = blendRGB(unpack(rgbs))
-
-    return { rgb2hsv(rgb[1], rgb[2], rgb[3]) }
-end
-
--- ディープコピー
-local function deepcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        -- tableなら再帰でコピー
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
-    else
-        -- number, string, booleanなどはそのままコピー
-        copy = orig
-    end
-    return copy
-end
-
 -- ランダム
 local random = love.math.random
-
--- ランダム真偽値
-local function randomBool(n)
-    return random(n or 2) == 1
-end
-
-Board.static.hsv2rgb = hsv2rgb
-Board.static.rgb2hsv = rgb2hsv
-Board.static.deepcopy = deepcopy
 
 -- ルール一覧
 Board.static.rules = {
@@ -137,8 +22,8 @@ Board.static.newRule = function(randomize)
     return randomize and {
         type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
-        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
+        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
+        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), }
     } or {
         type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
@@ -152,8 +37,8 @@ Board.static.newLifeRule = function(randomize)
     return randomize and {
         type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
-        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
+        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
+        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), }
     } or {
         type = 'Life',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
@@ -167,8 +52,8 @@ Board.static.newGenerationsRule = function(count, randomize)
     return randomize and {
         type = 'Generations',
         --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
-        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
+        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
+        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
         count = count or 2,
     } or {
         type = 'Generations',
@@ -199,8 +84,8 @@ function Board.static.convertLifeRule(rule)
         -- Generations ルール
         newRule = {
             type = 'Life',
-            birth = deepcopy(rule.birth),
-            survive = deepcopy(rule.survive),
+            birth = util.deepcopy(rule.birth),
+            survive = util.deepcopy(rule.survive),
         }
     end
     return newRule
@@ -213,8 +98,8 @@ function Board.static.convertGenerationsRule(rule)
         -- Life ルール
         newRule = {
             type = 'Generations',
-            birth = deepcopy(rule.birth),
-            survive = deepcopy(rule.survive),
+            birth = util.deepcopy(rule.birth),
+            survive = util.deepcopy(rule.survive),
             count = 2,
         }
     elseif rule.type == 'Generations' then
@@ -514,7 +399,7 @@ function Board:resize(width, height, scale)
 
     -- キャンバスの作成
     self.fb.reinit(self.width, self.height)
-    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.fb.setbg(util.rgb2bit(unpack(self:getColor(self.colors.death))))
     self.canvas = self.fb.get()
     self.canvas:setFilter('nearest', 'nearest')
     self.canvas:setWrap('repeat', 'repeat')
@@ -579,8 +464,8 @@ function Board:newCell(args)
 
     -- 新規
     return {
-        rule = rule or deepcopy(args.rule) or deepcopy(self.rule),
-        color = color or deepcopy(args.color) or deepcopy(self.colors.live),
+        rule = rule or util.deepcopy(args.rule) or util.deepcopy(self.rule),
+        color = color or util.deepcopy(args.color) or util.deepcopy(self.colors.live),
         age = 0,
     }
 end
@@ -601,7 +486,7 @@ function Board:crossover(parents)
         -- 交差
 
         -- 新ルール
-        rule = deepcopy(randomParent.rule)
+        rule = util.deepcopy(randomParent.rule)
 
         if numParents == 1 then
             -- 交差するほど数がいない
@@ -674,10 +559,10 @@ function Board:crossover(parents)
         -- クローン
         if mutation and self.option.mutationRule then
             -- 突然変異
-            rule = randomBool() and Board.newRule(true) or Board.newGenerationsRule(random(10), true)
+            rule = util.randomBool() and Board.newRule(true) or Board.newGenerationsRule(random(10), true)
         else
             -- コピー
-            rule = deepcopy(randomParent.rule)
+            rule = util.deepcopy(randomParent.rule)
         end
     end
 
@@ -690,17 +575,17 @@ function Board:crossover(parents)
             color = Board.newHSVColor(random(), 1, 1)
         elseif numParents == 1 then
             -- 交差するほど数がいない
-            color = deepcopy(randomParent.color)
+            color = util.deepcopy(randomParent.color)
         else
             -- 交差
             local colors = {}
             for _, parent in ipairs(parents) do
-                local hsv = deepcopy(parent.color.hsv)
+                local hsv = util.deepcopy(parent.color.hsv)
                 hsv[2] = 1
                 hsv[3] = 1
                 table.insert(colors, hsv)
             end
-            color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
+            color = Board.newHSVColor(unpack(util.blendHSV(unpack(colors))))
         end
         color.hsv[2] = 1
         color.hsv[3] = 1
@@ -711,7 +596,7 @@ function Board:crossover(parents)
             color = Board.newHSVColor(random(), 1, 1)
         else
             -- コピー
-            color = deepcopy(randomParent.color)
+            color = util.deepcopy(randomParent.color)
         end
         color.hsv[2] = 1
         color.hsv[3] = 1
@@ -736,7 +621,7 @@ function Board:resetAllCells(rule, color, div)
 
     for x = 1, self.width do
         for y = 1, self.height do
-            if randomBool(div) then
+            if util.randomBool(div) then
                 self:setCell(
                     x,
                     y,
@@ -759,13 +644,13 @@ function Board:resetRandomizeCells(randomColor, randomRule)
 
     for x = 1, self.width do
         for y = 1, self.height do
-            if randomBool() then
+            if util.randomBool() then
                 self:setCell(
                     x,
                     y,
                     self:newCell{
                         rule = randomRule and Board.newRule(true) or self.rule,
-                        color = randomColor and Board.newColor(true) or deepcopy(self.colors.live)
+                        color = randomColor and Board.newColor(true) or util.deepcopy(self.colors.live)
                     }
                 )
             end
@@ -802,7 +687,7 @@ end
 function Board:renderAllCells(refresh)
     refresh = refresh == nil and true or refresh
 
-    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.fb.setbg(util.rgb2bit(unpack(self:getColor(self.colors.death))))
     self.fb.fill()
 
     for x, column in pairs(self.cells) do
@@ -906,7 +791,7 @@ function Board:getColor(color)
     elseif color.rgb then
         return color.rgb
     elseif color.hsv then
-        return { hsv2rgb(unpack(color.hsv)) }
+        return { util.hsv2rgb(unpack(color.hsv)) }
     end
 end
 
@@ -958,7 +843,7 @@ function Board:step()
                     -- 死に始め
                     local nextCell = {
                         rule = cell.rule,
-                        color = deepcopy(cell.color),
+                        color = util.deepcopy(cell.color),
                         count = cell.rule.count - 1,
                     }
                     nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
@@ -981,7 +866,7 @@ function Board:step()
                 -- 死んでいく
                 local nextCell = {
                     rule = cell.rule,
-                    color = deepcopy(cell.color),
+                    color = util.deepcopy(cell.color),
                     count = cell.count - 1,
                 }
                 nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)

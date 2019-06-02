@@ -4,6 +4,9 @@ local folderOfThisFile = (...):match("(.-)[^%/%.]+$")
 -- ゲームクラス
 local Game = require(folderOfThisFile .. 'class')
 
+-- ユーティリティ
+local util = require 'util'
+
 -- ライブラリ
 local Slab = require 'Slab'
 local binser = require 'binser'
@@ -135,15 +138,15 @@ function Game:load(...)
     self.newBoardArgsTemplate = {
         width = self.board.width,
         height = self.board.height,
-        option = Board.deepcopy(self.board.option),
+        option = util.deepcopy(self.board.option),
     }
     self.newBoardArgs = nil
     self.errorMessage = nil
 
     -- セル設置時の設定
-    self.rule = Board.deepcopy(self.board.rule)
+    self.rule = util.deepcopy(self.board.rule)
     self.rulestring = Board.ruleToString(self.rule)
-    self.color = Board.deepcopy(self.board.colors.live)
+    self.color = util.deepcopy(self.board.colors.live)
     self.randomColor = true
     self.randomRule = false
 

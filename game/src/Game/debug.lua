@@ -1,6 +1,9 @@
 
 local folderOfThisFile = (...):match("(.-)[^%/%.]+$")
 
+-- ユーティリティ
+local util = require 'util'
+
 -- ゲームクラス
 local Game = require(folderOfThisFile .. 'class')
 
@@ -124,7 +127,7 @@ local function buttonColor(color, name)
 	local ww, wh = Slab.GetWindowActiveSize()
     local x, y = Slab.GetCursorPos()
     local h = Slab.GetStyle().Font:getHeight()
-    Slab.Rectangle({ W = ww, H = h, Color = { Board.hsv2rgb(unpack(color.hsv)) }, Outline = true })
+    Slab.Rectangle({ W = ww, H = h, Color = { util.hsv2rgb(unpack(color.hsv)) }, Outline = true })
     Slab.SetCursorPos(x, y)
 	activate = Slab.Button("", { Invisible = true, W = ww, H = h })
     Slab.EndColumn()
@@ -198,7 +201,7 @@ function Game:updateDebug(dt, ...)
         if Slab.BeginMenu("File") then
             if Slab.MenuItem("New...") then
                 self.board.pause = true
-                self.newBoardArgs = Board.deepcopy(self.newBoardArgsTemplate)
+                self.newBoardArgs = util.deepcopy(self.newBoardArgsTemplate)
                 Slab.OpenDialog('New')
             end
             if self.savable then
@@ -568,7 +571,7 @@ function Game:controlWindow()
     -- カラー
     if buttonColor(self.color, 'Color') then
         self.editColor = self.color
-        self.beforeColor = Board.deepcopy(self.editColor)
+        self.beforeColor = util.deepcopy(self.editColor)
     end
 
     separator()
@@ -611,13 +614,13 @@ function Game:ruleWindow()
     -- カラー（生）
     if buttonColor(self.board.colors.live, 'Live Color') then
         self.editColor = self.board.colors.live
-        self.beforeColor = Board.deepcopy(self.editColor)
+        self.beforeColor = util.deepcopy(self.editColor)
     end
 
     -- カラー（死）
     if buttonColor(self.board.colors.death, 'Death Color') then
         self.editColor = self.board.colors.death
-        self.beforeColor = Board.deepcopy(self.editColor)
+        self.beforeColor = util.deepcopy(self.editColor)
     end
 
     separator()
@@ -665,7 +668,7 @@ function Game:colorEditWindow(id, title)
     -- 色見本
     local ww, wh = Slab.GetWindowActiveSize()
     local h = Slab.GetStyle().Font:getHeight()
-    Slab.Rectangle({ W = 300, H = h, Color = { Board.hsv2rgb(unpack(self.editColor.hsv)) }, Outline = true })
+    Slab.Rectangle({ W = 300, H = h, Color = { util.hsv2rgb(unpack(self.editColor.hsv)) }, Outline = true })
 
     -- 各パラメータ
     if inputNumber(self.editColor.hsv, 1, 'Hue', 0, 1) then
