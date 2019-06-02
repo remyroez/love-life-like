@@ -92,12 +92,12 @@ function util.blendHSV(...)
     local n = select("#", ...)
     for i = 1, n do
         local color = select(i, ...)
-        table.insert(rgbs, { hsv2rgb(color[1], color[2], color[3]) })
+        table.insert(rgbs, { util.hsv2rgb(color[1], color[2], color[3]) })
     end
 
-    local rgb = blendRGB(unpack(rgbs))
+    local rgb = util.blendRGB(unpack(rgbs))
 
-    return { rgb2hsv(rgb[1], rgb[2], rgb[3]) }
+    return { util.rgb2hsv(rgb[1], rgb[2], rgb[3]) }
 end
 
 -- ディープコピー
