@@ -2,141 +2,103 @@
 local class = require 'middleclass'
 local fblove = require 'fblove_strip'
 
+-- ユーティリティ
+local util = require 'util'
+
 -- アプリケーション
 local Board = class 'Board'
-
--- HSV カラーを RGB カラーに変換
-local function hsv2rgb(h, s, v)
-    if s <= 0 then return v, v, v end
-    h, s, v = (h or 0) * 6, (s or 1), (v or 1)
-    local c = v * s
-    local x = (1 - math.abs((h % 2) - 1)) * c
-    local m, r, g, b = (v - c), 0, 0, 0
-    if h < 1     then r, g, b = c, x, 0
-    elseif h < 2 then r, g, b = x, c, 0
-    elseif h < 3 then r, g, b = 0, c, x
-    elseif h < 4 then r, g, b = 0, x, c
-    elseif h < 5 then r, g, b = x, 0, c
-    else              r, g, b = c, 0, x
-    end
-    return (r + m), (g + m), (b + m)
-end
-
--- RGB カラーを HSV カラーに変換
-local function rgb2hsv(r, g, b)
-    r, g, b = r or 0, g or 0, b or 0
-    local max, min = math.max(r, g, b), math.min(r, g, b)
-    local h, s, v
-    v = max
-
-    local d = max - min
-    if max == 0 then s = 0 else s = d / max end
-
-    if max == min then
-      h = 0 -- achromatic
-    else
-      if max == r then
-      h = (g - b) / d
-      if g < b then h = h + 6 end
-      elseif max == g then h = (b - r) / d + 2
-      elseif max == b then h = (r - g) / d + 4
-      end
-      h = h / 6
-    end
-
-    return h, s, v
-end
-
--- RGB カラーをビット変換
-local function rgb2bit(r, g, b, a)
-    r = r or 1
-    g = g or 1
-    b = b or 1
-    a = a or 1
-
-    return bit.bor(
-        bit.lshift(math.floor(a * 255), 24),
-        bit.lshift(math.floor(b * 255), 16),
-        bit.lshift(math.floor(g * 255), 8),
-        math.floor(r * 255)
-    )
-end
-
--- 任意の数の RGB カラーをブレンド
-local function blendRGB(...)
-    local rgb = { 0, 0, 0 }
-
-    local n = select("#", ...)
-    for i = 1, n do
-        local color = select(i, ...)
-        for j, elm in ipairs(rgb) do
-            rgb[j] = rgb[j] + color[j]
-        end
-    end
-
-    rgb[1] = math.min(rgb[1] / n, 1)
-    rgb[2] = math.min(rgb[2] / n, 1)
-    rgb[3] = math.min(rgb[3] / n, 1)
-
-    return rgb
-end
-
--- 任意の数の HSV カラーをブレンド
-local function blendHSV(...)
-    local rgbs = {}
-
-    local n = select("#", ...)
-    for i = 1, n do
-        local color = select(i, ...)
-        table.insert(rgbs, { hsv2rgb(color[1], color[2], color[3]) })
-    end
-
-    local rgb = blendRGB(unpack(rgbs))
-
-    return { rgb2hsv(rgb[1], rgb[2], rgb[3]) }
-end
-
--- ディープコピー
-local function deepcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        -- tableなら再帰でコピー
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
-    else
-        -- number, string, booleanなどはそのままコピー
-        copy = orig
-    end
-    return copy
-end
 
 -- ランダム
 local random = love.math.random
 
--- ランダム真偽値
-local function randomBool(n)
-    return random(n or 2) == 1
+-- ルール名一覧
+Board.static.ruleNames = {
+    'Life',
+    'Generations',
+}
+
+-- ルール一覧
+Board.static.rules = {}
+for _, name in ipairs(Board.static.ruleNames) do
+    Board.rules[name] = require(name)
 end
 
-Board.static.hsv2rgb = hsv2rgb
-Board.static.rgb2hsv = rgb2hsv
-Board.static.deepcopy = deepcopy
+-- ランダムなルール名
+function Board.static.randomRuleName()
+    return Board.ruleNames[random(#Board.ruleNames)]
+end
+
+-- ランダムなルール
+function Board.static.randomRule()
+    return Board.rules[random(#Board.rules)]
+end
 
 -- 新ルール
-Board.static.newRule = function(randomize)
-    return randomize and {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), },
-        survive = { randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), randomBool(), }
-    } or {
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, }
-    }
+function Board.static.newRule(name, ...)
+    assert(Board.rules[name], 'Invalid rule name: "' .. tostring(name) .. '"')
+    return Board.rules[name].newRule(...)
+end
+
+-- 新規ランダムルール
+function Board.static.newRandomRule(name, ...)
+    return Board.rules[name and name or Board.randomRuleName()].newRandomRule(...)
+end
+
+-- ルールをルール文字列化
+function Board.static.ruleToString(rule)
+    assert(Board.rules[rule.type], 'Invalid rule name: "' .. tostring(rule.type) .. '"')
+    return Board.rules[rule.type].toString(rule)
+end
+
+-- ルール文字列をルール化
+function Board.static.stringToRule(ruleType, str)
+    assert(Board.rules[ruleType], 'Invalid rule name: "' .. tostring(ruleType) .. '"')
+    return Board.rules[ruleType].toRule(str)
+end
+
+-- 他のルールから Life ルールに変換
+function Board.static.convertRule(ruleType, rule)
+    if ruleType == 'Life' then
+        return Board.convertLifeRule(rule)
+    elseif ruleType == 'Generations' then
+        return Board.convertGenerationsRule(rule)
+    end
+    return rule
+end
+
+-- 他のルールから Life ルールに変換
+function Board.static.convertLifeRule(rule)
+    local newRule
+    if rule.type == 'Life' then
+        -- Life ルール
+        newRule = rule
+    elseif rule.type == 'Generations' then
+        -- Generations ルール
+        newRule = {
+            type = 'Life',
+            birth = util.deepcopy(rule.birth),
+            survive = util.deepcopy(rule.survive),
+        }
+    end
+    return newRule
+end
+
+-- 他のルールから Generations ルールに変換
+function Board.static.convertGenerationsRule(rule)
+    local newRule
+    if rule.type == 'Life' then
+        -- Life ルール
+        newRule = {
+            type = 'Generations',
+            birth = util.deepcopy(rule.birth),
+            survive = util.deepcopy(rule.survive),
+            count = 2,
+        }
+    elseif rule.type == 'Generations' then
+        -- Generations ルール
+        newRule = rule
+    end
+    return newRule
 end
 
 -- 新HSVカラー
@@ -147,51 +109,6 @@ end
 -- 新カラー
 Board.static.newColor = function(randomize)
     return randomize and Board.newHSVColor(love.math.random(), 1, 1) or Board.newHSVColor(1, 0, 1)
-end
-
--- ルールを文字列化
-Board.static.ruleToString = function(rule)
-    local buffer = 'B'
-
-    for i, bool in ipairs(rule.birth) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    buffer = buffer .. '/S'
-
-    for i, bool in ipairs(rule.survive) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    return buffer
-end
-
--- ルールを文字列化
-Board.static.stringToRule = function(str)
-    str = str or 'B/S'
-
-    local rule = Board.newRule()
-
-    local target = 'birth'
-    for i = 1, string.len(str) do
-        local c = string.sub(str, i, i)
-        if c == 'B' then
-            target = 'birth'
-        elseif c == 'S' then
-            target = 'survive'
-        else
-            local n = tonumber(c)
-            if n then
-                rule[target][n + 1] = true
-            end
-        end
-    end
-
-    return rule
 end
 
 -- ルールが一致しているか判定
@@ -254,29 +171,29 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or Board.stringToRule 'B3/S23'
+    self.rule = args.rule or Board.stringToRule('Life', 'B3/S23')
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
     self:setOffset(0, 0)
 
     -- 遺伝オプション
-    args.option = args.option or {}
-    self.option = args.option
-    self.option.crossover = args.option.crossover ~= nil and args.option.crossover or false
-    self.option.crossoverRule = args.option.crossoverRule ~= nil and args.option.crossoverRule or false
-    self.option.crossoverColor = args.option.crossoverColor ~= nil and args.option.crossoverColor or false
-    self.option.crossoverRate = args.option.mutationRate or 0.001
-    self.option.mutation = args.option.mutation ~= nil and args.option.mutation or false
-    self.option.mutationRule = args.option.mutationRule ~= nil and args.option.mutationRule or false
-    self.option.mutationColor = args.option.mutationColor ~= nil and args.option.mutationColor or false
-    self.option.mutationRate = args.option.mutationRate or 0.000001
-    self.option.aging = args.option.aging ~= nil and args.option.aging or false
-    self.option.agingColor = args.option.agingColor ~= nil and args.option.agingColor or false
-    self.option.agingDeath = args.option.agingDeath ~= nil and args.option.agingDeath or false
-    self.option.lifespan = args.option.lifespan or 1000
-    self.option.lifespanRandom = args.option.lifespanRandom ~= nil and args.option.lifespanRandom or false
-    self.option.lifeSaturation = args.option.lifeSaturation or 0.75
+    self.option = args.option or {}
+    self.option.crossover = self.option.crossover ~= nil and self.option.crossover or false
+    self.option.crossoverRule = self.option.crossoverRule ~= nil and self.option.crossoverRule or false
+    self.option.crossoverColor = self.option.crossoverColor ~= nil and self.option.crossoverColor or false
+    self.option.crossoverRate = self.option.mutationRate or 0.001
+    self.option.mutation = self.option.mutation ~= nil and self.option.mutation or false
+    self.option.mutationRule = self.option.mutationRule ~= nil and self.option.mutationRule or false
+    self.option.mutationColor = self.option.mutationColor ~= nil and self.option.mutationColor or false
+    self.option.mutationRate = self.option.mutationRate or 0.000001
+    self.option.mutationRules = self.option.mutationRules or { Life = true, Generations = false }
+    self.option.aging = self.option.aging ~= nil and self.option.aging or false
+    self.option.agingColor = self.option.agingColor ~= nil and self.option.agingColor or false
+    self.option.agingDeath = self.option.agingDeath ~= nil and self.option.agingDeath or false
+    self.option.lifespan = self.option.lifespan or 1000
+    self.option.lifespanRandom = self.option.lifespanRandom ~= nil and self.option.lifespanRandom or false
+    self.option.lifeSaturation = self.option.lifeSaturation or 0.75
 
     -- その他
     self.minLifeSaturation = 1 - self.option.lifeSaturation
@@ -348,7 +265,7 @@ function Board:resize(width, height, scale)
 
     -- キャンバスの作成
     self.fb.reinit(self.width, self.height)
-    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.fb.setbg(util.rgb2bit(unpack(self:getColor(self.colors.death))))
     self.canvas = self.fb.get()
     self.canvas:setFilter('nearest', 'nearest')
     self.canvas:setWrap('repeat', 'repeat')
@@ -413,8 +330,8 @@ function Board:newCell(args)
 
     -- 新規
     return {
-        rule = rule or deepcopy(args.rule) or deepcopy(self.rule),
-        color = color or deepcopy(args.color) or deepcopy(self.colors.live),
+        rule = rule or util.deepcopy(args.rule) or util.deepcopy(self.rule),
+        color = color or util.deepcopy(args.color) or util.deepcopy(self.colors.live),
         age = 0,
     }
 end
@@ -435,7 +352,7 @@ function Board:crossover(parents)
         -- 交差
 
         -- 新ルール
-        rule = deepcopy(randomParent.rule)
+        rule = util.deepcopy(randomParent.rule)
 
         if numParents == 1 then
             -- 交差するほど数がいない
@@ -443,9 +360,19 @@ function Board:crossover(parents)
             -- それぞれのルールのリストアップ
             local birthRules = {}
             local surviveRules = {}
+            local counts = {}
+            local countMin, countMax = 10000, 2
             for _, parent in ipairs(parents) do
                 table.insert(birthRules, parent.rule.birth)
                 table.insert(surviveRules, parent.rule.survive)
+                if parent.rule.count then
+                    table.insert(counts, parent.rule.count)
+                    if parent.rule.count < countMin then
+                        countMin = parent.rule.count
+                    elseif parent.rule.count > countMax then
+                        countMax = parent.rule.count
+                    end
+                end
             end
 
             -- 誕生ルールの交差
@@ -483,15 +410,25 @@ function Board:crossover(parents)
                     mutated = true
                 end
             end
+
+            -- 死亡カウントの交差
+            if #counts > 0 then
+                rule = Board.convertGenerationsRule(rule)
+                if not mutation then
+                    rule.count = counts[random(#counts)]
+                else
+                    rule.count = random(countMin, countMax * 2)
+                end
+            end
         end
     else
         -- クローン
         if mutation and self.option.mutationRule then
             -- 突然変異
-            rule = Board.newRule(true)
+            rule = Board.newRandomRule()
         else
             -- コピー
-            rule = deepcopy(randomParent.rule)
+            rule = util.deepcopy(randomParent.rule)
         end
     end
 
@@ -504,17 +441,17 @@ function Board:crossover(parents)
             color = Board.newHSVColor(random(), 1, 1)
         elseif numParents == 1 then
             -- 交差するほど数がいない
-            color = deepcopy(randomParent.color)
+            color = util.deepcopy(randomParent.color)
         else
             -- 交差
             local colors = {}
             for _, parent in ipairs(parents) do
-                local hsv = deepcopy(parent.color.hsv)
+                local hsv = util.deepcopy(parent.color.hsv)
                 hsv[2] = 1
                 hsv[3] = 1
                 table.insert(colors, hsv)
             end
-            color = Board.newHSVColor(unpack(blendHSV(unpack(colors))))
+            color = Board.newHSVColor(unpack(util.blendHSV(unpack(colors))))
         end
         color.hsv[2] = 1
         color.hsv[3] = 1
@@ -525,7 +462,7 @@ function Board:crossover(parents)
             color = Board.newHSVColor(random(), 1, 1)
         else
             -- コピー
-            color = deepcopy(randomParent.color)
+            color = util.deepcopy(randomParent.color)
         end
         color.hsv[2] = 1
         color.hsv[3] = 1
@@ -550,7 +487,7 @@ function Board:resetAllCells(rule, color, div)
 
     for x = 1, self.width do
         for y = 1, self.height do
-            if randomBool(div) then
+            if util.randomBool(div) then
                 self:setCell(
                     x,
                     y,
@@ -573,13 +510,13 @@ function Board:resetRandomizeCells(randomColor, randomRule)
 
     for x = 1, self.width do
         for y = 1, self.height do
-            if randomBool() then
+            if util.randomBool() then
                 self:setCell(
                     x,
                     y,
                     self:newCell{
-                        rule = randomRule and Board.newRule(true) or self.rule,
-                        color = randomColor and Board.newColor(true) or deepcopy(self.colors.live)
+                        rule = randomRule and Board.newRandomRule() or self.rule,
+                        color = randomColor and Board.newColor(true) or util.deepcopy(self.colors.live)
                     }
                 )
             end
@@ -616,7 +553,7 @@ end
 function Board:renderAllCells(refresh)
     refresh = refresh == nil and true or refresh
 
-    self.fb.setbg(rgb2bit(unpack(self:getColor(self.colors.death))))
+    self.fb.setbg(util.rgb2bit(unpack(self:getColor(self.colors.death))))
     self.fb.fill()
 
     for x, column in pairs(self.cells) do
@@ -656,6 +593,8 @@ function Board:checkCell(x, y, target, candidates)
     if cell == nil then
         -- 見つからなければ次世代候補にする
         self:entryCandidates(x, y, target, candidates)
+    elseif cell.count then
+        -- 死んでいくセルはカウントしない
     else
         return cell
     end
@@ -700,6 +639,17 @@ function Board:checkAge(cell)
     end
 end
 
+-- セルが死んでいくかどうか
+function Board:checkDyingState(cell)
+    if not cell.count then
+        return nil
+    elseif cell.count <= 2 then
+        return 'die'
+    else
+        return 'dying'
+    end
+end
+
 -- 色の取得
 function Board:getColor(color)
     if color[1] then
@@ -707,7 +657,7 @@ function Board:getColor(color)
     elseif color.rgb then
         return color.rgb
     elseif color.hsv then
-        return { hsv2rgb(unpack(color.hsv)) }
+        return { util.hsv2rgb(unpack(color.hsv)) }
     end
 end
 
@@ -730,30 +680,66 @@ function Board:step()
     -- 生存しているセルをチェック
     for x, column in pairs(self.cells) do
         for y, cell in pairs(column) do
-            local count = 0
-            for _, pos in ipairs(Board.mooreNeighborhood) do
-                if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
-                    count = count + 1
-                end
-            end
-            if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
-                -- 生き残る
-                cell.age = cell.age + 1
-
-                -- 次世代へ
-                self:entryNextGeneration(x, y, cell, nextGenerations)
-
-                -- 老化
-                if self.option.aging and self.option.agingColor then
-                    if cell.color.hsv[2] > self.minLifeSaturation then
-                        cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
+            local state = self:checkDyingState(cell)
+            if not state then
+                -- まだ死なない
+                local count = 0
+                for _, pos in ipairs(Board.mooreNeighborhood) do
+                    if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
+                        count = count + 1
                     end
-                    self:renderPixel(x, y, self:getCellColor(cell))
                 end
-            else
+
+                -- 生死判定
+                if self:checkSurvive(count, cell.rule) and self:checkAge(cell) then
+                    -- 生き残る
+                    cell.age = cell.age + 1
+
+                    -- 次世代へ
+                    self:entryNextGeneration(x, y, cell, nextGenerations)
+
+                    -- 老化
+                    if self.option.aging and self.option.agingColor then
+                        if cell.color.hsv[2] > self.minLifeSaturation then
+                            cell.color.hsv[2] = cell.color.hsv[2] - self.lifeSaturationUnit
+                        end
+                        self:renderPixel(x, y, self:getCellColor(cell))
+                    end
+                elseif cell.rule.count and cell.rule.count > 2 then
+                    -- 死に始め
+                    local nextCell = {
+                        rule = cell.rule,
+                        color = util.deepcopy(cell.color),
+                        count = cell.rule.count - 1,
+                    }
+                    nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                    self:renderPixel(x, y, self:getCellColor(nextCell))
+
+                    -- 次世代へ
+                    self:entryNextGeneration(x, y, nextCell, nextGenerations)
+                else
+                    -- 死ぬ
+                    table.insert(deaths, x)
+                    table.insert(deaths, y)
+                end
+
+            elseif state == 'die' then
                 -- 死ぬ
                 table.insert(deaths, x)
                 table.insert(deaths, y)
+
+            elseif state == 'dying' then
+                -- 死んでいく
+                local nextCell = {
+                    rule = cell.rule,
+                    color = util.deepcopy(cell.color),
+                    count = cell.count - 1,
+                }
+                nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                self:renderPixel(x, y, self:getCellColor(nextCell))
+
+                -- 次世代へ
+                self:entryNextGeneration(x, y, nextCell, nextGenerations)
             end
         end
     end
