@@ -504,7 +504,7 @@ function Game:newDialog()
         Slab.Separator()
 
         if Slab.Button('Create', {AlignRight = true}) then
-            self:resetBoard()
+            self:resetBoard(args)
             Slab.CloseDialog()
         end
         Slab.SameLine()
