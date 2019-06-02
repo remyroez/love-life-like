@@ -11,57 +11,49 @@ local Board = class 'Board'
 -- ランダム
 local random = love.math.random
 
--- ルール一覧
-Board.static.rules = {
+-- ルール名一覧
+Board.static.ruleNames = {
     'Life',
     'Generations',
 }
 
--- 新ルール
-Board.static.newRule = function(randomize)
-    return randomize and {
-        type = 'Life',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
-        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), }
-    } or {
-        type = 'Life',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, }
-    }
+-- ルール一覧
+Board.static.rules = {}
+for _, name in ipairs(Board.static.ruleNames) do
+    Board.rules[name] = require(name)
+end
+
+-- ランダムなルール名
+function Board.static.randomRuleName()
+    return Board.ruleNames[random(#Board.ruleNames)]
+end
+
+-- ランダムなルール
+function Board.static.randomRule()
+    return Board.rules[random(#Board.rules)]
 end
 
 -- 新ルール
-Board.static.newLifeRule = function(randomize)
-    return randomize and {
-        type = 'Life',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
-        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), }
-    } or {
-        type = 'Life',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, }
-    }
+function Board.static.newRule(name, ...)
+    assert(Board.rules[name], 'Invalid rule name: "' .. tostring(name) .. '"')
+    return Board.rules[name].newRule(...)
 end
 
--- 新ルール
-Board.static.newGenerationsRule = function(count, randomize)
-    return randomize and {
-        type = 'Generations',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
-        survive = { util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), util.randomBool(), },
-        count = count or 2,
-    } or {
-        type = 'Generations',
-        --              0,     1,     2,     3,     4,     5,     6,     7      8
-        birth   = { false, false, false, false, false, false, false, false, false, },
-        survive = { false, false, false, false, false, false, false, false, false, },
-        count = count or 2,
-    }
+-- 新規ランダムルール
+function Board.static.newRandomRule(name, ...)
+    return Board.rules[name and name or Board.randomRuleName()].newRandomRule(...)
+end
+
+-- ルールをルール文字列化
+function Board.static.ruleToString(rule)
+    assert(Board.rules[rule.type], 'Invalid rule name: "' .. tostring(rule.type) .. '"')
+    return Board.rules[rule.type].toString(rule)
+end
+
+-- ルール文字列をルール化
+function Board.static.stringToRule(ruleType, str)
+    assert(Board.rules[ruleType], 'Invalid rule name: "' .. tostring(ruleType) .. '"')
+    return Board.rules[ruleType].toRule(str)
 end
 
 -- 他のルールから Life ルールに変換
@@ -117,132 +109,6 @@ end
 -- 新カラー
 Board.static.newColor = function(randomize)
     return randomize and Board.newHSVColor(love.math.random(), 1, 1) or Board.newHSVColor(1, 0, 1)
-end
-
--- ルールを文字列化
-Board.static.ruleToString = function(rule)
-    if rule.type == 'Life' then
-        return Board.lifeRuleToString(rule)
-    elseif rule.type == 'Generations' then
-        return Board.generationsRuleToString(rule)
-    end
-    return ''
-end
-
--- ルールを文字列化
-Board.static.lifeRuleToString = function(rule)
-    local buffer = 'B'
-
-    for i, bool in ipairs(rule.birth) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    buffer = buffer .. '/S'
-
-    for i, bool in ipairs(rule.survive) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    return buffer
-end
-
--- ルールを文字列化
-Board.static.generationsRuleToString = function(rule)
-    local buffer = 'B'
-
-    for i, bool in ipairs(rule.birth) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    buffer = buffer .. '/S'
-
-    for i, bool in ipairs(rule.survive) do
-        if bool then
-            buffer = buffer .. tostring(i - 1)
-        end
-    end
-
-    buffer = buffer .. '/C' .. rule.count
-
-    return buffer
-end
-
--- ルールを文字列化
-Board.static.stringToRule = function(ruleType, str)
-    if ruleType == 'Life' then
-        return Board.stringToLifeRule(str)
-    elseif ruleType == 'Generations' then
-        return Board.stringToGenerationsRule(str)
-    end
-end
-
--- Life ルールを文字列化
-Board.static.stringToLifeRule = function(str)
-    str = str or 'B/S'
-
-    local rule = Board.newRule()
-
-    local target = 'birth'
-    for i = 1, string.len(str) do
-        local c = string.sub(str, i, i)
-        if c == 'B' then
-            target = 'birth'
-        elseif c == 'S' then
-            target = 'survive'
-        else
-            local n = tonumber(c)
-            if n then
-                rule[target][n + 1] = true
-            end
-        end
-    end
-
-    return rule
-end
-
--- Generations ルールを文字列化
-Board.static.stringToGenerationsRule = function(str)
-    str = str or 'B/S/C'
-
-    local rule = Board.newGenerationsRule(0)
-
-    local target = 'birth'
-    for i = 1, string.len(str) do
-        local c = string.sub(str, i, i)
-        if c == 'B' then
-            target = 'birth'
-        elseif c == 'S' then
-            target = 'survive'
-        elseif c == 'C' then
-            target = 'count'
-        elseif c == '/' then
-            if target == 'birth' then
-                target = 'survive'
-            elseif target == 'survive' then
-                target = 'count'
-            elseif target == 'count' then
-            else
-            end
-        else
-            local n = tonumber(c)
-            if not n then
-                -- 数字じゃない
-            elseif target == 'count' then
-                -- カウント時
-                rule.count = rule.count * 10 + n
-            else
-                rule[target][n + 1] = true
-            end
-        end
-    end
-
-    return rule
 end
 
 -- ルールが一致しているか判定
@@ -305,7 +171,7 @@ function Board:initialize(args)
     self.cells = args.cells or {}
 
     -- ルール
-    self.rule = args.rule or Board.stringToLifeRule 'B3/S23'
+    self.rule = args.rule or Board.stringToRule('Life', 'B3/S23')
 
     -- オフセット
     self.offset = { x = 0, y = 0 }
@@ -559,7 +425,7 @@ function Board:crossover(parents)
         -- クローン
         if mutation and self.option.mutationRule then
             -- 突然変異
-            rule = util.randomBool() and Board.newRule(true) or Board.newGenerationsRule(random(10), true)
+            rule = Board.newRandomRule()
         else
             -- コピー
             rule = util.deepcopy(randomParent.rule)
@@ -649,7 +515,7 @@ function Board:resetRandomizeCells(randomColor, randomRule)
                     x,
                     y,
                     self:newCell{
-                        rule = randomRule and Board.newRule(true) or self.rule,
+                        rule = randomRule and Board.newRandomRule() or self.rule,
                         color = randomColor and Board.newColor(true) or util.deepcopy(self.colors.live)
                     }
                 )

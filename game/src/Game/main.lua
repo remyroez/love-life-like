@@ -212,7 +212,7 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board:resetCells()
         self.board:renderAllCells()
     elseif key == 'tab' then
-        self.board.rule = Board.newRule(true)
+        self.board.rule = Board.newRandomRule()
         self.board.colors.live = Board.newColor(true)
         self.board:resetRandomizeCells(self.randomColor)
         self.board:renderAllCells()
@@ -222,7 +222,7 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board:renderAllCells()
         self:resetTitle()
     elseif key == '0' then
-        self.board.rule = Board.newRule(true)
+        self.board.rule = Board.newRandomRule()
         self.board.colors.live = Board.newColor(true)
         self:resetTitle()
     end
@@ -284,7 +284,7 @@ end
 
 -- ルールをランダム設定
 function Game:randomizeRule()
-    self.rule = Board.newRule(true)
+    self.rule = Board.newRandomRule()
     self.rulestring = Board.ruleToString(self.rule)
     self.selectedRule = nil
 end

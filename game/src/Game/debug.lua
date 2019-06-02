@@ -500,7 +500,7 @@ function Game:controlWindow()
     Slab.SameLine()
     if Slab.Button('Reset', buttonOption) then
         self.board:resetAllCells(
-            self.randomRule and function () return Board.newRule(true) end or self.rule,
+            self.randomRule and function () return Board.newRandomRule() end or self.rule,
             self.randomColor and function () return Board.newColor(true) end or self.color
         )
         self.board:renderAllCells()
@@ -534,7 +534,7 @@ function Game:controlWindow()
         Slab.BeginColumn(2)
         local cw, ch = Slab.GetWindowActiveSize()
         if Slab.BeginComboBox('RuleType', { Selected = self.rule.type,  W = cw }) then
-            for i, name in ipairs(Board.rules) do
+            for i, name in ipairs(Board.ruleNames) do
                 if Slab.TextSelectable(name) then
                     self.rule = Board.convertRule(name, self.rule)
                     self.rulestring = Board.ruleToString(self.rule)
