@@ -663,8 +663,11 @@ function Board:crossover(parents)
             -- 死亡カウントの交差
             if #counts > 0 then
                 rule = Board.convertGenerationsRule(rule)
-                rule.count = random(countMin, countMax)
-                --rule.count = counts[random(#counts)]
+                if not mutation then
+                    rule.count = counts[random(#counts)]
+                else
+                    rule.count = random(countMin, countMax * 2)
+                end
             end
         end
     else
