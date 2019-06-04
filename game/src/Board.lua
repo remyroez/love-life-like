@@ -15,6 +15,7 @@ local random = love.math.random
 Board.static.ruleNames = {
     'Life',
     'Generations',
+    'LargerThanLife',
 }
 
 -- ルール一覧
@@ -62,6 +63,8 @@ function Board.static.convertRule(ruleType, rule)
         return Board.convertLifeRule(rule)
     elseif ruleType == 'Generations' then
         return Board.convertGenerationsRule(rule)
+    elseif ruleType == 'LargerThanLife' then
+        return Board.convertLargerThanLifeRule(rule)
     end
     return rule
 end
@@ -78,6 +81,13 @@ function Board.static.convertLifeRule(rule)
             type = 'Life',
             birth = util.deepcopy(rule.birth),
             survive = util.deepcopy(rule.survive),
+        }
+    elseif rule.type == 'LargerThanLife' then
+        -- LargerThanLife ルール
+        newRule = {
+            type = 'Life',
+            birth = util.makeBooleanTable(rule.birth.min, rule.birth.max),
+            survive = util.makeBooleanTable(rule.survive.min, rule.survive.max),
         }
     end
     return newRule
@@ -96,6 +106,50 @@ function Board.static.convertGenerationsRule(rule)
         }
     elseif rule.type == 'Generations' then
         -- Generations ルール
+        newRule = rule
+    elseif rule.type == 'LargerThanLife' then
+        -- LargerThanLife ルール
+        newRule = {
+            type = 'Generations',
+            birth = util.makeBooleanTable(rule.birth.min, rule.birth.max),
+            survive = util.makeBooleanTable(rule.survive.min, rule.survive.max),
+            count = rule.count + 2,
+        }
+    end
+    return newRule
+end
+
+-- 他のルールから LargerThanLife ルールに変換
+function Board.static.convertLargerThanLifeRule(rule)
+    local newRule
+    if rule.type == 'Life' then
+        -- Life ルール
+        newRule = {
+            type = 'LargerThanLife',
+            range = 1,
+            count = 0,
+            middle = 0,
+            survive = { min = 0, max = 0 },
+            birth = { min = 1, max = 1, },
+            neighborhood = 'M',
+        }
+        newRule.survive.min, newRule.survive.max = util.findTrueIndexMinMax(rule.survive)
+        newRule.birth.min, newRule.birth.max = util.findTrueIndexMinMax(rule.birth)
+    elseif rule.type == 'Generations' then
+        -- Generations ルール
+        newRule = {
+            type = 'LargerThanLife',
+            range = 1,
+            count = rule.count - 2,
+            middle = 0,
+            survive = { min = 0, max = 0 },
+            birth = { min = 1, max = 1, },
+            neighborhood = 'M',
+        }
+        newRule.survive.min, newRule.survive.max = util.findTrueIndexMinMax(rule.survive)
+        newRule.birth.min, newRule.birth.max = util.findTrueIndexMinMax(rule.birth)
+    elseif rule.type == 'LargerThanLife' then
+        -- LargerThanLife ルール
         newRule = rule
     end
     return newRule

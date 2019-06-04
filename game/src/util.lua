@@ -118,4 +118,59 @@ function util.deepcopy(orig)
     return copy
 end
 
+-- ブーリアンテーブルを作成する
+function util.makeBooleanTable(min, max, n)
+    n = n or 9
+    min = min or 1
+    max = max or n
+
+    t = {}
+    for i = 1, n do
+        t[i] = (i >= min) and (i <= max)
+    end
+
+    return t
+end
+
+
+-- 有効なインデックスの最小と最大を探す
+function util.findTrueIndexMinMax(t)
+    local min = nil
+    for i, b in ipairs(t) do
+        if b then
+            min = i
+            break
+        end
+    end
+    if min == nil then return nil, nil end
+    local max = nil
+    for i = 1, #t do
+        if t[#t + 1 - i] then
+            max = i
+            break
+        end
+    end
+    return min, max
+end
+
+-- ムーア近傍の作成
+function util.makeMooreNeighborhood(range, middle)
+    range = range or 1
+    middle = (middle ~= nil) and (middle ~= 0) or false
+
+    local side = range * 2 + 1
+    local t = {}
+    for i = 1, side do
+        for j = 1, side do
+            local x, y = -range + x - 1, -range + y - 1
+            if not middle and x == 0 and y == 0 then
+                -- 中心は入れない
+            else
+                table.insert(t, { x, y })
+            end
+        end
+    end
+    return t
+end
+
 return util
