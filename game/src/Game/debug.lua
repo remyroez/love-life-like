@@ -11,6 +11,7 @@ local Game = require(folderOfThisFile .. 'class')
 local Slab = require 'Slab'
 local Window = require('Slab.Internal.UI.Window')
 local binser = require 'binser'
+local Neighborhood = require 'Neighborhood'
 
 -- クラス
 local Board = require 'Board'
@@ -69,6 +70,24 @@ local function checkbox(t, name, label)
     return changed
 end
 
+-- チェックボックス（数値）
+local function checkboxInteger(t, name, label)
+    local changed = false
+
+    Slab.BeginColumn(1)
+    Slab.Text(label or name or '')
+    Slab.EndColumn()
+
+    Slab.BeginColumn(2)
+    if Slab.CheckBox(t[name] ~= 0, '', { Id = name or label or '' }) then
+        t[name] = t[name] ~= 0 and 0 or 1
+        changed = true
+    end
+    Slab.EndColumn()
+
+    return changed
+end
+
 -- 入力欄
 local function input(t, name, label)
     local changed = false
@@ -111,6 +130,17 @@ local function inputNumber(t, name, label, min, max)
         changed = true
     end
     Slab.EndColumn()
+
+    return changed
+end
+
+-- 入力欄（数字）
+local function inputInteger(t, name, label, min, max)
+    local changed = inputNumber(t, name, label, min, max)
+
+    if changed then
+        t[name] = math.floor(t[name])
+    end
 
     return changed
 end
@@ -297,12 +327,8 @@ function Game:newDialog()
 
         -- サイズ
         local args = self.newBoardArgs
-        if inputNumber(args, 'width', 'Width', 1) then
-            args.width = math.floor(args.width)
-        end
-        if inputNumber(args, 'height', 'Height', 1) then
-            args.height = math.floor(args.height)
-        end
+        inputInteger(args, 'width', 'Width', 1)
+        inputInteger(args, 'height', 'Height', 1)
 
         separator()
 
@@ -324,9 +350,7 @@ function Game:newDialog()
         checkbox(option, 'agingDeath', 'Aging Death')
         separator()
 
-        if inputNumber(option, 'lifespan', 'Lifespan', 0) then
-            option.lifespan = math.floor(option.lifespan)
-        end
+        inputInteger(option, 'lifespan', 'Lifespan', 0)
         checkbox(option, 'lifespanRandom', 'Lifespan Random')
         inputNumber(option, 'lifeSaturation', 'Lifespan Saturation', 0, 1)
 
@@ -546,17 +570,52 @@ function Game:controlWindow()
         Slab.EndColumn()
     end
 
-    -- ルールチェックボックス
-    if self.rule.birth and self.rule.survive and checkboxesRule(self.rule) then
-        self.rulestring = Board.ruleToString(self.rule)
-        self.selectedRule = nil
-    end
+    if self.rule.type == 'LargerThanLife' then
+        local changed = false
+        changed = inputInteger(self.rule, 'range', 'Range', 1) or changed
+        changed = inputInteger(self.rule, 'count', 'Count', 0) or changed
+        changed = checkboxInteger(self.rule, 'middle', 'Middle', 0, 1) or changed
+        changed = inputInteger(self.rule.survive, 'min', 'Survive Min', 0) or changed
+        changed = inputInteger(self.rule.survive, 'max', 'Survive Max', 0) or changed
+        changed = inputInteger(self.rule.birth, 'min', 'Birth Min', 0) or changed
+        changed = inputInteger(self.rule.birth, 'max', 'Birth Max', 0) or changed
 
-    -- ルール カウント
-    if self.rule.count and inputNumber(self.rule, 'count', 'Count', 2) then
-        self.rule.count = math.floor(self.rule.count)
-        self.rulestring = Board.ruleToString(self.rule)
-        self.selectedRule = nil
+        -- 近傍
+        do
+            Slab.BeginColumn(1)
+            Slab.Text('Neighborhood')
+            Slab.EndColumn()
+
+            Slab.BeginColumn(2)
+            local cw, ch = Slab.GetWindowActiveSize()
+            if Slab.BeginComboBox('Neighborhood', { Selected = Neighborhood.nameTable[self.rule.neighborhood],  W = cw }) then
+                for i, name in ipairs(Neighborhood.names) do
+                    if Slab.TextSelectable(name) then
+                        self.rule.neighborhood = Neighborhood.nameTable[i]
+                        changed = true
+                    end
+                end
+                Slab.EndComboBox()
+            end
+            Slab.EndColumn()
+        end
+
+        if changed then
+            self.rulestring = Board.ruleToString(self.rule)
+            self.selectedRule = nil
+        end
+    else
+        -- ルールチェックボックス
+        if self.rule.birth and self.rule.survive and checkboxesRule(self.rule) then
+            self.rulestring = Board.ruleToString(self.rule)
+            self.selectedRule = nil
+        end
+
+        -- ルール カウント
+        if self.rule.count and inputInteger(self.rule, 'count', 'Count', 2) then
+            self.rulestring = Board.ruleToString(self.rule)
+            self.selectedRule = nil
+        end
     end
 
     -- ルール文字列
@@ -647,8 +706,7 @@ function Game:ruleWindow()
     checkbox(option, 'agingDeath', 'Aging Death')
     separator()
 
-    if inputNumber(option, 'lifespan', 'Lifespan', 0) then
-        option.lifespan = math.floor(option.lifespan)
+    if inputInteger(option, 'lifespan', 'Lifespan', 0) then
         self.board:updateLifespanOption()
     end
     checkbox(option, 'lifespanRandom', 'Lifespan Random')

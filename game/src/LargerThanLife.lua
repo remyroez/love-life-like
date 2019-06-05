@@ -40,11 +40,11 @@ function LargerThanLife.toString(rule)
     rule = type(rule) == 'table' and rule or LargerThanLife.newRule()
 
     return
-        'R' .. tostring(rule.range) .. ',',
-        'C' .. tostring(rule.count) .. ',',
-        'M' .. tostring(rule.middle) .. ',',
-        'S' .. tostring(rule.survive.min) .. '..' .. tostring(rule.survive.max) .. ',',
-        'B' .. tostring(rule.birth.min) .. '..' .. tostring(rule.birth.max) .. ',',
+        'R' .. tostring(rule.range) .. ',' ..
+        'C' .. tostring(rule.count) .. ',' ..
+        'M' .. tostring(rule.middle) .. ',' ..
+        'S' .. tostring(rule.survive.min) .. '..' .. tostring(rule.survive.max) .. ',' ..
+        'B' .. tostring(rule.birth.min) .. '..' .. tostring(rule.birth.max) .. ',' ..
         'N' .. rule.neighborhood
 end
 
@@ -66,7 +66,7 @@ function LargerThanLife.toRule(str)
             target = 'range'
         elseif c == 'C' then
             target = 'count'
-        elseif c == 'M' then
+        elseif target ~= 'neighborhood' and c == 'M' then
             target = 'middle'
         elseif c == 'S' then
             target = 'survive'
@@ -74,14 +74,14 @@ function LargerThanLife.toRule(str)
         elseif c == 'B' then
             target = 'birth'
             subtarget = 'min'
-        elseif c == 'N' then
+        elseif target ~= 'neighborhood' and c == 'N' then
             target = 'neighborhood'
         elseif c == ',' then
             -- 区切り文字（リセット）
             target = ''
         elseif c == '.' then
             subtarget = 'max'
-        elseif target == 'neighborhood' and c == 'M' or c == 'N' then
+        elseif target == 'neighborhood' and (c == 'M' or c == 'N') then
             -- 近傍
             rule.neighborhood = c
         elseif target == '' then

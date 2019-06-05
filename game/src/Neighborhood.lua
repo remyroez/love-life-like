@@ -6,6 +6,18 @@ local util = require 'util'
 
 Neighborhood.cache = {}
 
+Neighborhood.names = {
+    'Moore neighborhood',
+    'von Neumann neighborhood',
+}
+
+Neighborhood.nameTable = {
+    'M',
+    'N',
+    ['M'] = 'Moore neighborhood',
+    ['N'] = 'von Neumann neighborhood',
+}
+
 -- ムーア近傍の作成
 function Neighborhood.makeMooreNeighborhood(range, middle)
     range = range or 1
