@@ -119,7 +119,7 @@ local function inputNumber(t, name, label, min, max)
     Slab.BeginColumn(2)
 	local ww, wh = Slab.GetWindowActiveSize()
     local h = Slab.GetStyle().Font:getHeight()
-    if Slab.Input(name, { Text = tostring(t[name]), ReturnOnText = false, NumbersOnly = true, W = ww, H = h }) then
+    if Slab.Input(tostring(t) .. name, { Text = tostring(t[name]), ReturnOnText = false, NumbersOnly = true, W = ww, H = h }) then
         local n = tonumber(Slab.GetInputText())
         if min and n < min then
             n = min

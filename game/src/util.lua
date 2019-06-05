@@ -138,7 +138,7 @@ function util.findTrueIndexMinMax(t)
     local min = nil
     for i, b in ipairs(t) do
         if b then
-            min = i
+            min = i - 1
             break
         end
     end
@@ -146,7 +146,7 @@ function util.findTrueIndexMinMax(t)
     local max = nil
     for i = 1, #t do
         if t[#t + 1 - i] then
-            max = i
+            max = #t - i
             break
         end
     end

@@ -143,7 +143,7 @@ function Board.static.convertLargerThanLifeRule(rule)
         newRule = {
             type = 'LargerThanLife',
             range = 1,
-            count = rule.count - 2,
+            count = rule.count,
             middle = 0,
             survive = { min = 0, max = 0 },
             birth = { min = 1, max = 1, },
