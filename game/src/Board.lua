@@ -653,12 +653,22 @@ end
 
 -- セルが生き残るかどうか
 function Board:checkSurvive(count, rule)
-    return (rule or self.rule).survive[count + 1] == true
+    rule = rule or self.rule
+    if rule.survive.min and rule.survive.max then
+        return (count >= rule.survive.min) and count <= (rule.survive.max)
+    else
+        return rule.survive[count + 1] == true
+    end
 end
 
 -- セルが誕生するかどうか
 function Board:checkBirth(count, rule)
-    return (rule or self.rule).birth[count + 1] == true
+    rule = rule or self.rule
+    if rule.birth.min and rule.birth.max then
+        return (count >= rule.birth.min) and count <= (rule.birth.max)
+    else
+        return rule.birth[count + 1] == true
+    end
 end
 
 -- 隣人からセルが誕生するかどうかチェック
@@ -717,6 +727,11 @@ function Board:getCellColor(cell)
     return self:getColor(cell and (cell.color or self.colors.live) or self.colors.death)
 end
 
+-- 近傍の取得
+function Board:getNeighborhood(cell)
+    return cell.rule.neighborhood and Neighborhood.require(cell.rule.neighborhood, cell.rule.range, cell.rule.middle) or Board.mooreNeighborhood
+end
+
 -- 次の世代へ進む
 function Board:step()
     -- 誕生候補
@@ -735,7 +750,7 @@ function Board:step()
             if not state then
                 -- まだ死なない
                 local count = 0
-                for _, pos in ipairs(Board.mooreNeighborhood) do
+                for _, pos in ipairs(self:getNeighborhood(cell)) do
                     if self:checkCell(x + pos[1], y + pos[2], cell, candidates) then
                         count = count + 1
                     end
