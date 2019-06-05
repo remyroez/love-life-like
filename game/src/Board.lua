@@ -5,6 +5,9 @@ local fblove = require 'fblove_strip'
 -- ユーティリティ
 local util = require 'util'
 
+-- 近傍
+local Neighborhood = require 'Neighborhood'
+
 -- アプリケーション
 local Board = class 'Board'
 
@@ -193,16 +196,10 @@ Board.static.checkRules = function(rules)
 end
 
 -- ムーア近傍
-Board.static.mooreNeighborhood = {
-    { -1, -1 },
-    {  0, -1 },
-    {  1, -1 },
-    { -1,  0 },
-    {  1,  0 },
-    { -1,  1 },
-    {  0,  1 },
-    {  1,  1 },
-}
+Board.static.mooreNeighborhood = Neighborhood.require('M')
+
+-- ノイマン近傍
+Board.static.vonNeumannNeighborhood = Neighborhood.require('N')
 
 -- 初期化
 function Board:initialize(args)
