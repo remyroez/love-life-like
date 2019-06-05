@@ -126,7 +126,7 @@ function util.makeBooleanTable(min, max, n)
 
     t = {}
     for i = 1, n do
-        t[i] = (i >= min) and (i <= max)
+        t[i] = ((i - 1) >= min) and ((i - 1) <= max)
     end
 
     return t
@@ -165,6 +165,28 @@ function util.makeMooreNeighborhood(range, middle)
             local x, y = -range + x - 1, -range + y - 1
             if not middle and x == 0 and y == 0 then
                 -- 中心は入れない
+            else
+                table.insert(t, { x, y })
+            end
+        end
+    end
+    return t
+end
+
+-- ノイマン近傍の作成
+function util.makeVonNeumannNeighborhood(range, middle)
+    range = range or 1
+    middle = (middle ~= nil) and (middle ~= 0) or false
+
+    local side = range * 2 + 1
+    local t = {}
+    for i = 1, side do
+        for j = 1, side do
+            local x, y = -range + x - 1, -range + y - 1
+            if not middle and x == 0 and y == 0 then
+                -- 中心は入れない
+            elseif (math.abs(x) + math.abs(y)) > range then
+                -- 距離範囲外は入れない
             else
                 table.insert(t, { x, y })
             end
