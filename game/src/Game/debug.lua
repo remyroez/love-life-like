@@ -368,7 +368,7 @@ function Game:newDialog()
     end
 end
 
--- 開くダイアログ
+-- ボードのリセット
 function Game:resetBoard(args, filename)
     self.board = Board {
         width  = args.width,
@@ -379,6 +379,8 @@ function Game:resetBoard(args, filename)
     }
     self.baseRuleString = Board.ruleToString(self.board.rule)
     self.filename = filename or ''
+    self.currentFilename = self.filename
+    self:resetTitle()
 end
 
 -- 開くダイアログ
@@ -467,6 +469,8 @@ function Game:saveDialog()
         if Slab.Button('Save', { AlignRight = true, Disabled = #self.filename == 0 }) then
             local success, message = self:saveBoard(self.filename)
             if success then
+                self.currentFilename = self.filename
+                self:resetTitle()
                 Slab.CloseDialog()
             else
                 self.errorMessage = message

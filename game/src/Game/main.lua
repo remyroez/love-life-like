@@ -173,6 +173,7 @@ function Game:load(...)
 
     -- ボード保存関連
     self.filename = ''
+    self.currentFilename = self.filename
     self.fileList = nil
     self.selectedFile = nil
     self.newBoardArgsTemplate = {
@@ -256,15 +257,12 @@ function Game:keypressed(key, scancode, isrepeat)
         self.board.colors.live = Board.newColor(true)
         self.board:resetRandomizeCells(self.randomColor)
         self.board:renderAllCells()
-        self:resetTitle()
     elseif key == '`' then
         self.board:resetRandomizeCells(true, true)
         self.board:renderAllCells()
-        self:resetTitle()
     elseif key == '0' then
         self.board.rule = Board.newRandomRule()
         self.board.colors.live = Board.newColor(true)
-        self:resetTitle()
     end
 end
 
@@ -410,8 +408,10 @@ function Game:controls()
 end
 
 -- タイトルのリセット
-function Game:resetTitle(rule)
-    local strrule = Board.ruleToString(rule or self.board.rule)
-    love.window.setTitle('LIFE-LIKE - ' .. strrule)
-    print(strrule)
+function Game:resetTitle()
+    if #self.currentFilename > 0 then
+        love.window.setTitle('LIFE-LIKE - ' .. self.currentFilename)
+    else
+        love.window.setTitle('LIFE-LIKE')
+    end
 end
