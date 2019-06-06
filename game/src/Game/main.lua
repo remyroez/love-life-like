@@ -119,6 +119,46 @@ function Game:load(...)
             type = 'Generations',
             rulestring = 'B2/S/3'
         },
+        {
+            title = 'Bugs',
+            type = 'LargerThanLife',
+            rulestring = 'R5,C0,M1,S34..58,B34..45,NM'
+        },
+        {
+            title = 'Bugsmovie',
+            type = 'LargerThanLife',
+            rulestring = 'R10,C0,M1,S123..212,B123..170,N'
+        },
+        {
+            title = 'Globe',
+            type = 'LargerThanLife',
+            rulestring = 'R8,C0,M0,S163..223,B74..252,NM'
+        },
+        {
+            title = 'Gnarl',
+            type = 'LargerThanLife',
+            rulestring = 'R1,C0,M1,S1..1,B1..1,NN'
+        },
+        {
+            title = 'Majority',
+            type = 'LargerThanLife',
+            rulestring = 'R4,C0,M1,S41..81,B41..81,NM'
+        },
+        {
+            title = 'Majorly',
+            type = 'LargerThanLife',
+            rulestring = 'R7,C0,M1,S113..225,B113..225,NM'
+        },
+        {
+            title = 'ModernArt',
+            type = 'LargerThanLife',
+            rulestring = 'R10,C255,M1,S2..3,B3..3,NM'
+        },
+        {
+            title = 'Waffle',
+            type = 'LargerThanLife',
+            rulestring = 'R7,C0,M1,S100..200,B75..170,NM'
+        },
     }
     self.selectedRule = nil
     self.selectedRule = self.rules[1].title .. ' (' .. self.rules[1].rulestring .. ')'
