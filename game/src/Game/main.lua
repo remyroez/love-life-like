@@ -202,6 +202,7 @@ function Game:load(...)
 
     -- ＵＩ
     self.focusUI = false
+    self.focusKeyboard = false
     self.editColor = nil
     self.beforeColor = nil
     self.windows = {
@@ -239,7 +240,7 @@ end
 
 -- キー入力
 function Game:keypressed(key, scancode, isrepeat)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- debug
     elseif key == 'return' then
         self.board:togglePause()
@@ -268,14 +269,14 @@ end
 
 -- キー離した
 function Game:keyreleased(key, scancode)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- debug
     end
 end
 
 -- テキスト入力
 function Game:textinput(text)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- imgui
     end
 end

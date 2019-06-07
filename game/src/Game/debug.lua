@@ -10,6 +10,7 @@ local Game = require(folderOfThisFile .. 'class')
 -- ライブラリ
 local Slab = require 'Slab'
 local Window = require('Slab.Internal.UI.Window')
+local Input = require('Slab.Internal.UI.Input')
 local binser = require 'binser'
 local Neighborhood = require 'Neighborhood'
 
@@ -315,6 +316,7 @@ function Game:updateDebug(dt, ...)
     end
 
     self.focusUI = Window.IsObstructedAtMouse()
+    self.focusKeyboard = Input.IsFocused()
 end
 
 -- 新規ダイアログ
