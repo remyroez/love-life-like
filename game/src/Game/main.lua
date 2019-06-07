@@ -253,17 +253,6 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == 'delete' then
         self.board:resetCells()
         self.board:renderAllCells()
-    elseif key == 'tab' then
-        self.board.rule = Board.newRandomRule()
-        self.board.colors.live = Board.newColor(true)
-        self.board:resetRandomizeCells(self.randomColor)
-        self.board:renderAllCells()
-    elseif key == '`' then
-        self.board:resetRandomizeCells(true, true)
-        self.board:renderAllCells()
-    elseif key == '0' then
-        self.board.rule = Board.newRandomRule()
-        self.board.colors.live = Board.newColor(true)
     end
 end
 

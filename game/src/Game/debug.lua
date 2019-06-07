@@ -279,7 +279,7 @@ function Game:updateDebug(dt, ...)
         end
 
         -- ウィンドウ
-        if Slab.BeginMenu("Windows") then
+        if Slab.BeginMenu("Window") then
             if Slab.MenuItemChecked("Control", self.windows.control) then
                 self.windows.control = not self.windows.control
             end
@@ -509,7 +509,7 @@ end
 
 -- 操作ウィンドウ
 function Game:controlWindow()
-    Slab.BeginWindow('Control', { Title = "Control", Columns = 2 })
+    Slab.BeginWindow('Control', { Title = "Control", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true })
 
     local ww, wh = Slab.GetWindowActiveSize()
     local buttonOption = { W = ww / 4 - 4 }
@@ -661,7 +661,7 @@ end
 
 -- ルールウィンドウ
 function Game:ruleWindow()
-    Slab.BeginWindow('Rule', { Title = "Optional Rule", Columns = 2 })
+    Slab.BeginWindow('Rule', { Title = "Optional Rule", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true })
 
     --[[
 
