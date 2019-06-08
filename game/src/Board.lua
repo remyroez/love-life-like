@@ -383,7 +383,8 @@ function Board:newCell(args)
     return {
         rule = rule or util.deepcopy(args.rule) or util.deepcopy(self.rule),
         color = color or util.deepcopy(args.color) or util.deepcopy(self.colors.live),
-        age = 0,
+        age = args.age or 0,
+        count = args.count or nil
     }
 end
 
@@ -704,7 +705,7 @@ end
 function Board:checkDyingState(cell)
     if not cell.count then
         return nil
-    elseif cell.count >= cell.rule.count then
+    elseif cell.count >= (cell.rule.count - 1) then
         return 'die'
     else
         return 'dying'

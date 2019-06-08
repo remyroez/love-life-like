@@ -190,6 +190,7 @@ function Game:load(...)
     self.color = util.deepcopy(self.board.colors.live)
     self.randomColor = true
     self.randomRule = false
+    self.state = 1
 
     -- ボードのランダム設定
     self.board:resetRandomizeCells(self.randomColor, self.randomRule)
@@ -352,12 +353,18 @@ function Game:controls()
             -- セルが無いので描画
             self:randomizeRuleAndColor()
 
+            local count
+            if self.rule.count and self.state > 1 then
+                count = self.state
+            end
+
             self.board:setCell(
                 x,
                 y,
                 self.board:newCell{
                     rule = self.rule,
-                    color = self.color
+                    color = self.color,
+                    count = count,
                 }
             )
             self.board:renderCell(x, y)

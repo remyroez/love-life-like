@@ -644,6 +644,16 @@ function Game:controlWindow()
     checkbox(self, 'randomColor', 'Random Color')
     checkbox(self, 'randomRule', 'Random Rule')
 
+    if self.rule.count then
+        if inputInteger(self, 'state', 'State', 1, math.max(self.rule.count - 1, 1)) then
+            if self.state > 1 then
+                self.color.hsv[3] = 1 - ((self.state - 1) / (self.rule.count - 1))
+            else
+                self.color.hsv[3] = 1
+            end
+        end
+    end
+
     -- コンテキストメニュー
     if Slab.BeginContextMenuWindow() then
         if Slab.MenuItem('Randomize rule') then
