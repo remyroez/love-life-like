@@ -509,7 +509,7 @@ end
 
 -- 操作ウィンドウ
 function Game:controlWindow()
-    Slab.BeginWindow('Control', { Title = "Control", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true })
+    Slab.BeginWindow('Control', { Title = "Control", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true, X = self.width - 400 - 10, Y = 30, W = 400 })
 
     local ww, wh = Slab.GetWindowActiveSize()
     local buttonOption = { W = ww / 4 - 4 }
@@ -661,7 +661,7 @@ end
 
 -- ルールウィンドウ
 function Game:ruleWindow()
-    Slab.BeginWindow('Rule', { Title = "Optional Rule", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true })
+    Slab.BeginWindow('Rule', { Title = "Optional Rule", Columns = 2, AutoSizeWindow = false, AutoSizeWindowH = true, W = 300, X = 10, Y = self.height - 300 - 10 })
 
     --[[
 
