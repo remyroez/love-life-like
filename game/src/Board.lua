@@ -704,7 +704,7 @@ end
 function Board:checkDyingState(cell)
     if not cell.count then
         return nil
-    elseif cell.count <= 2 then
+    elseif cell.count >= cell.rule.count then
         return 'die'
     else
         return 'dying'
@@ -776,9 +776,9 @@ function Board:step()
                     local nextCell = {
                         rule = cell.rule,
                         color = util.deepcopy(cell.color),
-                        count = cell.rule.count - 1,
+                        count = 2,
                     }
-                    nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                    nextCell.color.hsv[3] = 1 - ((nextCell.count - 1) / (nextCell.rule.count - 1))
                     self:renderPixel(x, y, self:getCellColor(nextCell))
 
                     -- 次世代へ
@@ -799,9 +799,9 @@ function Board:step()
                 local nextCell = {
                     rule = cell.rule,
                     color = util.deepcopy(cell.color),
-                    count = cell.count - 1,
+                    count = cell.count + 1,
                 }
-                nextCell.color.hsv[3] = (nextCell.count - 1) / (nextCell.rule.count - 1)
+                nextCell.color.hsv[3] = 1 - ((nextCell.count - 1) / (nextCell.rule.count - 1))
                 self:renderPixel(x, y, self:getCellColor(nextCell))
 
                 -- 次世代へ
