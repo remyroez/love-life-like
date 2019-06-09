@@ -50,10 +50,7 @@ love .
 - [Slab](https://github.com/coding-jackalope/Slab) v0.3.0 (customized)
 - [binser](https://github.com/bakpakin/binser) 0.0-8
 - [FBlove](https://love2d.org/forums/viewtopic.php?f=5&t=85013) for love11.1
-- [lume](https://github.com/rxi/lume/tree/d8c2eddc10af994ad4956cf0b7ae7188e86db47e) 2.3.0
-- [lurker](https://github.com/rxi/lurker/tree/4e34f47f9ed95477407425c5b25a779fac3eb9a7) 1.0.1
 - [middleclass](https://github.com/kikito/middleclass) v4.1.1
-- [Stateful](https://github.com/kikito/stateful.lua) 1.0.5 (2017-08)
 
 ## License
 
