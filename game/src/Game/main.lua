@@ -119,6 +119,46 @@ function Game:load(...)
             type = 'Generations',
             rulestring = 'B2/S/3'
         },
+        {
+            title = 'Bugs',
+            type = 'LargerThanLife',
+            rulestring = 'R5,C0,M1,S34..58,B34..45,NM'
+        },
+        {
+            title = 'Bugsmovie',
+            type = 'LargerThanLife',
+            rulestring = 'R10,C0,M1,S123..212,B123..170,N'
+        },
+        {
+            title = 'Globe',
+            type = 'LargerThanLife',
+            rulestring = 'R8,C0,M0,S163..223,B74..252,NM'
+        },
+        {
+            title = 'Gnarl',
+            type = 'LargerThanLife',
+            rulestring = 'R1,C0,M1,S1..1,B1..1,NN'
+        },
+        {
+            title = 'Majority',
+            type = 'LargerThanLife',
+            rulestring = 'R4,C0,M1,S41..81,B41..81,NM'
+        },
+        {
+            title = 'Majorly',
+            type = 'LargerThanLife',
+            rulestring = 'R7,C0,M1,S113..225,B113..225,NM'
+        },
+        {
+            title = 'ModernArt',
+            type = 'LargerThanLife',
+            rulestring = 'R10,C255,M1,S2..3,B3..3,NM'
+        },
+        {
+            title = 'Waffle',
+            type = 'LargerThanLife',
+            rulestring = 'R7,C0,M1,S100..200,B75..170,NM'
+        },
     }
     self.selectedRule = nil
     self.selectedRule = self.rules[1].title .. ' (' .. self.rules[1].rulestring .. ')'
@@ -133,6 +173,7 @@ function Game:load(...)
 
     -- ボード保存関連
     self.filename = ''
+    self.currentFilename = self.filename
     self.fileList = nil
     self.selectedFile = nil
     self.newBoardArgsTemplate = {
@@ -149,6 +190,7 @@ function Game:load(...)
     self.color = util.deepcopy(self.board.colors.live)
     self.randomColor = true
     self.randomRule = false
+    self.state = 1
 
     -- ボードのランダム設定
     self.board:resetRandomizeCells(self.randomColor, self.randomRule)
@@ -161,6 +203,7 @@ function Game:load(...)
 
     -- ＵＩ
     self.focusUI = false
+    self.focusKeyboard = false
     self.editColor = nil
     self.beforeColor = nil
     self.windows = {
@@ -198,7 +241,7 @@ end
 
 -- キー入力
 function Game:keypressed(key, scancode, isrepeat)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- debug
     elseif key == 'return' then
         self.board:togglePause()
@@ -211,33 +254,19 @@ function Game:keypressed(key, scancode, isrepeat)
     elseif key == 'delete' then
         self.board:resetCells()
         self.board:renderAllCells()
-    elseif key == 'tab' then
-        self.board.rule = Board.newRandomRule()
-        self.board.colors.live = Board.newColor(true)
-        self.board:resetRandomizeCells(self.randomColor)
-        self.board:renderAllCells()
-        self:resetTitle()
-    elseif key == '`' then
-        self.board:resetRandomizeCells(true, true)
-        self.board:renderAllCells()
-        self:resetTitle()
-    elseif key == '0' then
-        self.board.rule = Board.newRandomRule()
-        self.board.colors.live = Board.newColor(true)
-        self:resetTitle()
     end
 end
 
 -- キー離した
 function Game:keyreleased(key, scancode)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- debug
     end
 end
 
 -- テキスト入力
 function Game:textinput(text)
-    if self.debugMode and self.focusUI then
+    if self.debugMode and self.focusKeyboard then
         -- imgui
     end
 end
@@ -324,12 +353,18 @@ function Game:controls()
             -- セルが無いので描画
             self:randomizeRuleAndColor()
 
+            local count
+            if self.rule.count and self.state > 1 then
+                count = self.state
+            end
+
             self.board:setCell(
                 x,
                 y,
                 self.board:newCell{
                     rule = self.rule,
-                    color = self.color
+                    color = self.color,
+                    count = count,
                 }
             )
             self.board:renderCell(x, y)
@@ -370,8 +405,10 @@ function Game:controls()
 end
 
 -- タイトルのリセット
-function Game:resetTitle(rule)
-    local strrule = Board.ruleToString(rule or self.board.rule)
-    love.window.setTitle('LIFE-LIKE - ' .. strrule)
-    print(strrule)
+function Game:resetTitle()
+    if #self.currentFilename > 0 then
+        love.window.setTitle('LIFE-LIKE - ' .. self.currentFilename)
+    else
+        love.window.setTitle('LIFE-LIKE')
+    end
 end

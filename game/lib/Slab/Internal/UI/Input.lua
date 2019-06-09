@@ -580,4 +580,8 @@ function Input.GetHeight()
 	return Style.Font:getHeight()
 end
 
+function Input.IsFocused()
+	return Focused ~= nil
+end
+
 return Input

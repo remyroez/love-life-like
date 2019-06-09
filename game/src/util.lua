@@ -118,4 +118,39 @@ function util.deepcopy(orig)
     return copy
 end
 
+-- ブーリアンテーブルを作成する
+function util.makeBooleanTable(min, max, n)
+    n = n or 9
+    min = min or 1
+    max = max or n
+
+    t = {}
+    for i = 1, n do
+        t[i] = ((i - 1) >= min) and ((i - 1) <= max)
+    end
+
+    return t
+end
+
+
+-- 有効なインデックスの最小と最大を探す
+function util.findTrueIndexMinMax(t)
+    local min = nil
+    for i, b in ipairs(t) do
+        if b then
+            min = i - 1
+            break
+        end
+    end
+    if min == nil then return nil, nil end
+    local max = nil
+    for i = 1, #t do
+        if t[#t + 1 - i] then
+            max = #t - i
+            break
+        end
+    end
+    return min, max
+end
+
 return util
