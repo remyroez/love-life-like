@@ -2,10 +2,6 @@
 -- デバッグモード
 local debugMode = true
 
--- ライブラリ
-local lume = require 'lume'
-local lurker = require 'lurker'
-
 -- フォーカス
 local focused = true
 local screenshot
@@ -13,12 +9,6 @@ local screenshot
 -- ゲーム
 local game = (require 'Game')()
 game:setDebugMode(debugMode)
-
--- ホットスワップ後の対応
-if lurker then
-    lurker.postswap = function (f)
-    end
-end
 
 -- 読み込み
 function love.load()
@@ -54,9 +44,6 @@ function love.keypressed(key, scancode, isrepeat)
     elseif key == 'printscreen' then
         -- スクリーンショット
         love.graphics.captureScreenshot('screenshot/' .. os.time() .. '.png')
-    elseif key == 'f1' and debugMode and lurker then
-        -- スキャン
-        lurker.scan()
     elseif key == 'f5' then
         -- リスタート
         love.event.quit('restart')
