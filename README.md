@@ -1,8 +1,8 @@
-# love-life-like
+# LIFE-LIKE
 
 :space_invader: Generic Life-like cellular automaton with LÖVE
 
-![Screenshot](https://user-images.githubusercontent.com/1193542/58362964-6ee44480-7ed8-11e9-9895-05b97cd3d7ba.png)
+![Screenshot](https://user-images.githubusercontent.com/1193542/59155571-1e1f3f00-8ac7-11e9-91bf-3011930f4422.png)
 
 ## Menu
 
