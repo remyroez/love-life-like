@@ -126,4 +126,65 @@ function LargerThanLife.validate(rule)
     return ok
 end
 
+-- ルールの情報を取得する
+function LargerThanLife.getRuleElements(rules)
+    local births = { min = { min = 10000, max = 0 }, max = { min = 10000, max = 0 } }
+    local survives = { min = { min = 10000, max = 0 }, max = { min = 10000, max = 0 } }
+    local ranges = { min = 10000, max = 1 }
+    local middles = {}
+    local neighborhoods = {}
+    local counts = { min = 10000, max = 0 }
+    for _, rule in ipairs(rules) do
+        table.insert(births, rule.birth)
+        table.insert(births.min, rule.birth.min)
+        table.insert(births.max, rule.birth.max)
+        table.insert(survives, rule.survive)
+        table.insert(survives.min, rule.survive.min)
+        table.insert(survives.max, rule.survive.max)
+
+        -- 誕生範囲最低値の最低値／最大値
+        if rule.birth.min < births.min.min then births.min.min = rule.birth.min
+        elseif rule.birth.min < births.min.max then births.min.max = rule.birth.min
+        end
+        -- 誕生範囲最大値の最低値／最大値
+        if rule.birth.max < births.max.min then births.max.min = rule.birth.max
+        elseif rule.birth.max < births.max.max then births.max.max = rule.birth.max
+        end
+        -- 生存範囲最低値の最低値／最大値
+        if rule.survive.min < survives.min.min then survives.min.min = rule.survive.min
+        elseif rule.survive.min < survives.min.max then survives.min.max = rule.survive.min
+        end
+        -- 生存範囲最大値の最低値／最大値
+        if rule.survive.max < survives.max.min then survives.max.min = rule.survive.max
+        elseif rule.survive.max < survives.max.max then survives.max.max = rule.survive.max
+        end
+        -- 範囲
+        table.insert(ranges, rule.range)
+        if rule.range < ranges.min then
+            ranges.min = rule.range
+        elseif rule.range > ranges.max then
+            ranges.max = rule.range
+        end
+        -- カウント
+        table.insert(counts, rule.count)
+        if rule.count < counts.min then
+            counts.min = rule.count
+        elseif rule.count > counts.max then
+            counts.max = rule.count
+        end
+        -- その他
+        table.insert(middles, rule.middle)
+        table.insert(neighborhoods, rule.neighborhood)
+    end
+
+    return {
+        ranges = ranges,
+        counts = counts,
+        middles = middles,
+        survives = survives,
+        births = births,
+        neighborhoods = neighborhoods,
+    }
+end
+
 return LargerThanLife

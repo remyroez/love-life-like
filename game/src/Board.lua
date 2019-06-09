@@ -158,6 +158,17 @@ function Board.static.convertLargerThanLifeRule(rule)
     return newRule
 end
 
+-- ルールの分類を返す
+function Board.static.getRuleCategory(rule)
+    if rule.birth.min then
+        return 'range'
+    elseif rule.birth[1] ~= nil then
+        return 'flags'
+    else
+
+    end
+end
+
 -- 新HSVカラー
 Board.static.newHSVColor = function(h, s, v)
     return { hsv = { h or 0, s or 1, v or 1 } }
@@ -402,74 +413,165 @@ function Board:crossover(parents)
     local rule
     if self.option.crossover and self.option.crossoverRule then
         -- 交差
-
-        -- 新ルール
-        rule = util.deepcopy(randomParent.rule)
-
         if numParents == 1 then
             -- 交差するほど数がいない
+            rule = util.deepcopy(randomParent.rule)
         else
+            -- 親のルールを分類する
+            local parentRules = {
+                flags = {},
+                range = {},
+            }
+            for i, parent in ipairs(parents) do
+                table.insert(parentRules[Board.getRuleCategory(parent.rule)], parent.rule)
+            end
+            local hasFlagRule = #parentRules.flags > 0
+            local hasRangeRule = #parentRules.range > 0
+
+            -- 新ルールのベース
+            if hasRangeRule then
+                rule = util.deepcopy(parentRules.range[random(#parentRules.range)])
+                if hasFlagRule then
+                    local base = parentRules.flags[1]
+                    for i = 1, 9 do
+                        rule.birth[i] = base.birth[i]
+                        rule.survive[i] = base.survive[i]
+                    end
+                    --rule.type = 'Mixture'
+                end
+            else
+                rule = util.deepcopy(randomParent.rule)
+            end
+
             -- それぞれのルールのリストアップ
-            local birthRules = {}
-            local surviveRules = {}
+            local birthFlagRules = {}
+            local surviveFlagRules = {}
             local counts = {}
             local countMin, countMax = 10000, 2
-            for _, parent in ipairs(parents) do
-                table.insert(birthRules, parent.rule.birth)
-                table.insert(surviveRules, parent.rule.survive)
-                if parent.rule.count then
-                    table.insert(counts, parent.rule.count)
-                    if parent.rule.count < countMin then
-                        countMin = parent.rule.count
-                    elseif parent.rule.count > countMax then
-                        countMax = parent.rule.count
+            for _, parentRule in ipairs(parentRules.flags) do
+                table.insert(birthFlagRules, parentRule.birth)
+                table.insert(surviveFlagRules, parentRule.survive)
+                if parentRule.count then
+                    table.insert(counts, parentRule.count)
+                    if parentRule.count < countMin then
+                        countMin = parentRule.count
+                    elseif parentRule.count > countMax then
+                        countMax = parentRule.count
                     end
                 end
+            end
+            -- Larger than Life ルールの各要素の列挙
+            local LtLenums = hasRangeRule and Board.rules.LargerThanLife.getRuleElements(parentRules.range) or nil
+
+            -- 突然変異の対象
+            -- 1: birth
+            -- 2: survive
+            -- 3: count
+            -- 4: range
+            -- 5: middle
+            -- 6: neighborhood
+            local mutateTarget
+            if hasRangeRule then
+                mutateTarget = random(6)
+            elseif hasFlagRule then
+                mutateTarget = random(2 + ((#counts > 0) and 1 or 0))
             end
 
             -- 誕生ルールの交差
             do
-                -- 交差
-                local rules = {}
-                local diffIndice, sameIndice = Board.checkRules(birthRules)
-                for _, index in ipairs(diffIndice) do
-                    rule.birth[index] = parents[random(numParents)].rule.birth[index]
+                if hasFlagRule then
+                    -- フラグ系ルール交差
+                    local diffIndice, sameIndice = Board.checkRules(birthFlagRules)
+                    for _, index in ipairs(diffIndice) do
+                        rule.birth[index] = birthFlagRules[random(#birthFlagRules)][index]
+                    end
+                    -- 突然変異
+                    if self.option.mutationRule and #sameIndice > 0 and mutation and mutateTarget == 1 then
+                        -- 全ての親で同じフラグのどれかを反転
+                        local mutationIndex = sameIndice[random(#sameIndice)]
+                        rule.birth[mutationIndex] = not rule.birth[mutationIndex]
+                        mutated = true
+                    end
                 end
+                if hasRangeRule then
+                    -- 範囲系ルール交差
+                    rule.birth.min = LtLenums.births.min[random(#LtLenums.births.min)]
+                    rule.birth.max = LtLenums.births.max[random(#LtLenums.births.max)]
 
-                -- 突然変異
-                if #sameIndice > 0 and mutation and birthOrSurvive then
-                    -- 全ての親で同じフラグのどれかを反転
-                    local mutationIndex = sameIndice[random(#sameIndice)]
-                    rule.birth[mutationIndex] = not rule.birth[mutationIndex]
-                    mutated = true
+                    -- 突然変異
+                    if self.option.mutationRule and mutation and mutateTarget == 1 then
+                        rule.birth.min = random(0, math.min(LtLenums.births.min.max * 2, LtLenums.births.max.min))
+                        rule.birth.max = random(math.max(rule.birth.min, LtLenums.births.max.min), LtLenums.births.max.max * 2)
+                        mutated = true
+                    end
                 end
             end
 
             -- 生存ルールの交差
             do
-                -- 交差
-                local rules = {}
-                local diffIndice, sameIndice = Board.checkRules(surviveRules)
-                for _, index in ipairs(diffIndice) do
-                    rule.survive[index] = parents[random(numParents)].rule.survive[index]
+                if hasFlagRule then
+                    -- フラグ系ルール交差
+                    local diffIndice, sameIndice = Board.checkRules(surviveFlagRules)
+                    for _, index in ipairs(diffIndice) do
+                        rule.survive[index] = surviveFlagRules[random(#surviveFlagRules)][index]
+                    end
+                    -- 突然変異
+                    if self.option.mutationRule and #sameIndice > 0 and mutation and mutateTarget == 2 then
+                        -- 全ての親で同じフラグのどれかを反転
+                        local mutationIndex = sameIndice[random(#sameIndice)]
+                        rule.survive[mutationIndex] = not rule.survive[mutationIndex]
+                        mutated = true
+                    end
                 end
+                if hasRangeRule then
+                    -- 範囲系ルール交差
+                    rule.survive.min = LtLenums.survives.min[random(#LtLenums.survives.min)]
+                    rule.survive.max = LtLenums.survives.max[random(#LtLenums.survives.max)]
 
-                -- 突然変異
-                if #sameIndice > 0 and mutation and self.option.mutationRule and not birthOrSurvive then
-                    -- 全ての親で同じフラグのどれかを反転
-                    local mutationIndex = sameIndice[random(#sameIndice)]
-                    rule.survive[mutationIndex] = not rule.survive[mutationIndex]
-                    mutated = true
+                    -- 突然変異
+                    if self.option.mutationRule and mutation and mutateTarget == 2 then
+                        rule.survive.min = random(0, math.min(LtLenums.survives.min.max * 2, LtLenums.survives.max.min))
+                        rule.survive.max = random(math.max(rule.survive.min, LtLenums.survives.max.min), LtLenums.survives.max.max * 2)
+                        mutated = true
+                    end
                 end
             end
 
             -- 死亡カウントの交差
             if #counts > 0 then
-                rule = Board.convertGenerationsRule(rule)
                 if not mutation then
                     rule.count = counts[random(#counts)]
-                else
+                elseif mutateTarget == 3 then
                     rule.count = random(countMin, countMax * 2)
+                end
+            end
+
+            if hasRangeRule then
+                -- LtL
+
+                -- 範囲の交差
+                do
+                    if not mutation then
+                        rule.range = random(LtLenums.ranges.min, LtLenums.ranges.max)
+                    elseif mutateTarget == 4 then
+                        rule.range = random(1, LtLenums.ranges.max * 2)
+                    end
+                end
+                -- 中心の交差
+                do
+                    if not mutation then
+                        rule.middle = LtLenums.middles[random(#LtLenums.middles)]
+                    elseif mutateTarget == 4 then
+                        rule.middle = random(0, 1)
+                    end
+                end
+                -- 近傍の交差
+                do
+                    if not mutation then
+                        rule.middle = LtLenums.neighborhoods[random(#LtLenums.neighborhoods)]
+                    elseif mutateTarget == 4 then
+                        rule.middle = random(2) == 1 and 'M' or 'N'
+                    end
                 end
             end
         end
@@ -655,7 +757,7 @@ end
 -- セルが生き残るかどうか
 function Board:checkSurvive(count, rule)
     rule = rule or self.rule
-    if rule.survive.min and rule.survive.max then
+    if rule.survive[count + 1] == nil and rule.survive.min and rule.survive.max then
         return (count >= rule.survive.min) and count <= (rule.survive.max)
     else
         return rule.survive[count + 1] == true
@@ -665,7 +767,7 @@ end
 -- セルが誕生するかどうか
 function Board:checkBirth(count, rule)
     rule = rule or self.rule
-    if rule.birth.min and rule.birth.max then
+    if rule.birth[count + 1] == nil and rule.birth.min and rule.birth.max then
         return (count >= rule.birth.min) and count <= (rule.birth.max)
     else
         return rule.birth[count + 1] == true
